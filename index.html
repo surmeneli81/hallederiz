@@ -1,22 +1,4 @@
-api_url = "https://script.google.com/macros/s/AKfycbzH2E3K16Ek1zjIKo33dXVcc6bEfO0DursTxqAPiIMWU3te5ArRFvXfUK57zDcAm0qX/exec"
-
-mekanlar = [
-    "D101", "D102", "D103", "D104", "D105",
-    "D201", "D202", "D203", "D204", "D205",
-    "DZ01", "DB01",
-    "L106 PC Lab", "L107 PC Lab", "L206 PC Lab", "L207 PC Lab",
-    "Hidrolik Lab", "Kontrol Lab", "Kaynak Lab", "Elektrik Lab", "Elektronik Lab",
-    "Gemi Mak. Lab.", "Gemi Lab(-2)",
-    "H101", "H102", "H103", "H104", "H105",
-    "H201", "H202", "H203", "H204", "H205",
-    "Toplantı Odası", "Personel Odası(-1)",
-    "Müdür", "Mdr. Yrd-1", "Mdr. Yrd.-2",
-    "Danışma", "Öğrenci Klüp1", "Öğrenci Klüp2", "Öğrenci İşleri", "Diğer"
-]
-
-options_html = "\n                    ".join(f"<option>{m}</option>" for m in mekanlar)
-
-html_app = f"""<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
@@ -26,7 +8,7 @@ html_app = f"""<!DOCTYPE html>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>hallederiz v1.0 | Sürmene Abdullah Kanca MYO</title>
 <style>
-  :root {{
+  :root {
     --navy: #003e6b;
     --dark-navy: #002646;
     --cyan: #009fe3;
@@ -38,12 +20,12 @@ html_app = f"""<!DOCTYPE html>
     --green: #10b981;
     --amber: #f59e0b;
     --red: #ef4444;
-  }}
-  * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }}
-  body {{ background: var(--bg); color: var(--text); padding-bottom: 84px; min-height: 100vh; }}
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg); color: var(--text); padding-bottom: 84px; min-height: 100vh; }
 
   /* Header */
-  header {{
+  header {
     background: var(--navy);
     color: #fff;
     padding: 12px 16px;
@@ -51,14 +33,14 @@ html_app = f"""<!DOCTYPE html>
     top: 0;
     z-index: 50;
     box-shadow: 0 2px 10px rgba(0,0,0,0.18);
-  }}
-  .header-top {{ display: flex; align-items: center; justify-content: space-between; max-width: 960px; margin: 0 auto; gap: 10px; }}
-  .brand {{ display: flex; align-items: center; gap: 10px; }}
-  .logo-wrap {{ width: 38px; height: 38px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }}
-  .brand-name {{ font-size: 17px; font-weight: 800; letter-spacing: 0.2px; line-height: 1.1; }}
-  .brand-sub {{ font-size: 11px; color: #bae6fd; margin-top: 2px; }}
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; max-width: 960px; margin: 0 auto; gap: 10px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo-wrap { width: 38px; height: 38px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .brand-name { font-size: 17px; font-weight: 800; letter-spacing: 0.2px; line-height: 1.1; }
+  .brand-sub { font-size: 11px; color: #bae6fd; margin-top: 2px; }
   
-  .status-pill {{
+  .status-pill {
     font-size: 11px;
     font-weight: 700;
     padding: 5px 10px;
@@ -70,12 +52,12 @@ html_app = f"""<!DOCTYPE html>
     gap: 6px;
     cursor: pointer;
     border: 1px solid rgba(255,255,255,0.2);
-  }}
-  .dot-ind {{ width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }}
-  .dot-ind.live {{ background: var(--green); }}
+  }
+  .dot-ind { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
+  .dot-ind.live { background: var(--green); }
 
   /* Role Switcher */
-  .role-bar {{
+  .role-bar {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 6px;
@@ -84,8 +66,8 @@ html_app = f"""<!DOCTYPE html>
     background: rgba(0,0,0,0.22);
     padding: 4px;
     border-radius: 10px;
-  }}
-  .role-btn {{
+  }
+  .role-btn {
     border: none;
     background: transparent;
     color: #cbd5e1;
@@ -95,11 +77,11 @@ html_app = f"""<!DOCTYPE html>
     border-radius: 7px;
     cursor: pointer;
     transition: 0.2s;
-  }}
-  .role-btn.active {{ background: #fff; color: var(--navy); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }}
+  }
+  .role-btn.active { background: #fff; color: var(--navy); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
 
   /* Master Access Bar (when unlocked via admin password) */
-  .master-bar {{
+  .master-bar {
     display: none;
     max-width: 960px;
     margin: 8px auto 0;
@@ -111,11 +93,11 @@ html_app = f"""<!DOCTYPE html>
     justify-content: space-between;
     gap: 8px;
     flex-wrap: wrap;
-  }}
-  .master-bar.show {{ display: flex; }}
-  .master-label {{ font-size: 11px; font-weight: 700; color: #e0f2fe; }}
-  .master-tabs {{ display: flex; gap: 6px; flex-wrap: wrap; }}
-  .master-tab-btn {{
+  }
+  .master-bar.show { display: flex; }
+  .master-label { font-size: 11px; font-weight: 700; color: #e0f2fe; }
+  .master-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .master-tab-btn {
     border: none;
     background: rgba(255,255,255,0.16);
     color: #fff;
@@ -124,26 +106,26 @@ html_app = f"""<!DOCTYPE html>
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
-  }}
-  .master-tab-btn.active {{ background: var(--cyan); color: #fff; }}
+  }
+  .master-tab-btn.active { background: var(--cyan); color: #fff; }
 
   /* Main Container */
-  main {{ max-width: 960px; margin: 0 auto; padding: 14px; }}
+  main { max-width: 960px; margin: 0 auto; padding: 14px; }
 
   /* Cards & Forms */
-  .card {{
+  .card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 16px;
     margin-bottom: 14px;
     box-shadow: 0 2px 8px rgba(15,23,42,0.04);
-  }}
-  .card-title {{ font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }}
+  }
+  .card-title { font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   
-  .form-group {{ margin-bottom: 12px; }}
-  label {{ display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 5px; }}
-  input, select, textarea {{
+  .form-group { margin-bottom: 12px; }
+  label { display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 5px; }
+  input, select, textarea {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid var(--border);
@@ -151,13 +133,13 @@ html_app = f"""<!DOCTYPE html>
     font-size: 14px;
     background: #fff;
     color: var(--text);
-  }}
-  input:focus, select:focus, textarea:focus {{ outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,159,227,0.15); }}
-  textarea {{ resize: vertical; min-height: 76px; }}
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,159,227,0.15); }
+  textarea { resize: vertical; min-height: 76px; }
 
-  .row-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-  .btn {{
+  .btn {
     width: 100%;
     padding: 11px 16px;
     border: none;
@@ -170,49 +152,49 @@ html_app = f"""<!DOCTYPE html>
     align-items: center;
     justify-content: center;
     gap: 6px;
-  }}
-  .btn-primary {{ background: var(--navy); color: #fff; }}
-  .btn-primary:active {{ transform: scale(0.98); }}
-  .btn-cyan {{ background: var(--cyan); color: #fff; }}
-  .btn-green {{ background: var(--green); color: #fff; }}
-  .btn-amber {{ background: var(--amber); color: #fff; }}
-  .btn-outline {{ background: #fff; color: var(--navy); border: 1px solid var(--border); }}
-  .btn-sm {{ padding: 7px 11px; font-size: 12px; width: auto; }}
+  }
+  .btn-primary { background: var(--navy); color: #fff; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-cyan { background: var(--cyan); color: #fff; }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-amber { background: var(--amber); color: #fff; }
+  .btn-outline { background: #fff; color: var(--navy); border: 1px solid var(--border); }
+  .btn-sm { padding: 7px 11px; font-size: 12px; width: auto; }
 
   /* Task Item */
-  .task-item {{
+  .task-item {
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 13px;
     margin-bottom: 10px;
     background: #fff;
-  }}
-  .task-item:last-child {{ margin-bottom: 0; }}
-  .task-top {{ display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }}
-  .task-meta {{ font-size: 11px; color: var(--muted); font-weight: 600; }}
-  .task-title {{ font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.4; }}
-  .badge {{
+  }
+  .task-item:last-child { margin-bottom: 0; }
+  .task-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+  .task-meta { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .task-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.4; }
+  .badge {
     font-size: 11px;
     font-weight: 700;
     padding: 3px 9px;
     border-radius: 20px;
     white-space: nowrap;
-  }}
-  .b-beklemede {{ background: #fef3c7; color: #92400e; }}
-  .b-atandi {{ background: #e0f2fe; color: #075985; }}
-  .b-islemde {{ background: #ede9fe; color: #5b21b6; }}
-  .b-onay {{ background: #ffedd5; color: #9a3412; }}
-  .b-cozuldu {{ background: #d1fae5; color: #065f46; }}
+  }
+  .b-beklemede { background: #fef3c7; color: #92400e; }
+  .b-atandi { background: #e0f2fe; color: #075985; }
+  .b-islemde { background: #ede9fe; color: #5b21b6; }
+  .b-onay { background: #ffedd5; color: #9a3412; }
+  .b-cozuldu { background: #d1fae5; color: #065f46; }
 
   /* Dropdown for extra items */
-  details.more-drawer {{
+  details.more-drawer {
     margin-top: 10px;
     border: 1px solid var(--border);
     border-radius: 10px;
     background: #f8fafc;
     overflow: hidden;
-  }}
-  details.more-drawer > summary {{
+  }
+  details.more-drawer > summary {
     list-style: none;
     cursor: pointer;
     padding: 10px 12px;
@@ -223,40 +205,40 @@ html_app = f"""<!DOCTYPE html>
     align-items: center;
     justify-content: space-between;
     user-select: none;
-  }}
-  details.more-drawer > summary::-webkit-details-marker {{ display: none; }}
-  details.more-drawer[open] > summary {{ border-bottom: 1px solid var(--border); background: #eff6ff; }}
-  .more-drawer-body {{ padding: 10px; background: #fff; }}
+  }
+  details.more-drawer > summary::-webkit-details-marker { display: none; }
+  details.more-drawer[open] > summary { border-bottom: 1px solid var(--border); background: #eff6ff; }
+  .more-drawer-body { padding: 10px; background: #fff; }
 
   /* Stepper */
-  .stepper {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px; }}
-  .step-bar {{ height: 5px; border-radius: 4px; background: #e2e8f0; }}
-  .step-bar.done {{ background: var(--green); }}
-  .step-bar.curr {{ background: var(--cyan); }}
-  .step-labels {{ display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 4px; }}
+  .stepper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px; }
+  .step-bar { height: 5px; border-radius: 4px; background: #e2e8f0; }
+  .step-bar.done { background: var(--green); }
+  .step-bar.curr { background: var(--cyan); }
+  .step-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 4px; }
 
   /* Switch */
-  .switch-row {{ display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }}
-  .switch-row:last-child {{ border-bottom: none; }}
-  .switch {{ position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }}
-  .switch input {{ opacity: 0; width: 0; height: 0; }}
-  .slider {{ position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 26px; transition: .25s; }}
-  .slider:before {{ position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .25s; }}
-  input:checked + .slider {{ background: var(--navy); }}
-  input:checked + .slider:before {{ transform: translateX(20px); }}
+  .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+  .switch-row:last-child { border-bottom: none; }
+  .switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 26px; transition: .25s; }
+  .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .25s; }
+  input:checked + .slider { background: var(--navy); }
+  input:checked + .slider:before { transform: translateX(20px); }
 
   /* KPI Grid */
-  .kpi-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }}
-  .kpi-box {{ background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; }}
-  .kpi-val {{ font-size: 20px; font-weight: 800; color: var(--navy); }}
-  .kpi-lbl {{ font-size: 11px; color: var(--muted); margin-top: 2px; }}
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .kpi-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; }
+  .kpi-val { font-size: 20px; font-weight: 800; color: var(--navy); }
+  .kpi-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-  table {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
-  th, td {{ padding: 8px; text-align: left; border-bottom: 1px solid var(--border); }}
-  th {{ background: #f8fafc; color: var(--navy); font-weight: 700; }}
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f8fafc; color: var(--navy); font-weight: 700; }
 
   /* Bottom Nav */
-  .bottom-nav {{
+  .bottom-nav {
     position: fixed;
     bottom: 0; left: 0; right: 0;
     background: #fff;
@@ -265,9 +247,9 @@ html_app = f"""<!DOCTYPE html>
     justify-content: space-around;
     padding: 8px 4px;
     z-index: 50;
-  }}
-  .bottom-nav.hidden {{ display: none; }}
-  .nav-item {{
+  }
+  .bottom-nav.hidden { display: none; }
+  .nav-item {
     border: none;
     background: transparent;
     color: var(--muted);
@@ -279,23 +261,23 @@ html_app = f"""<!DOCTYPE html>
     gap: 3px;
     cursor: pointer;
     padding: 4px 10px;
-  }}
-  .nav-item.active {{ color: var(--navy); }}
-  .nav-icon {{ font-size: 18px; }}
+  }
+  .nav-item.active { color: var(--navy); }
+  .nav-icon { font-size: 18px; }
 
   /* Modal & Toast */
-  .modal-backdrop {{
+  .modal-backdrop {
     position: fixed; inset: 0; background: rgba(15,23,42,0.6);
     display: none; align-items: center; justify-content: center; padding: 16px; z-index: 100;
-  }}
-  .modal-backdrop.show {{ display: flex; }}
-  .modal {{ background: #fff; border-radius: 16px; padding: 20px; width: 100%; max-width: 440px; }}
-  .toast {{
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal { background: #fff; border-radius: 16px; padding: 20px; width: 100%; max-width: 440px; }
+  .toast {
     position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
     background: var(--dark-navy); color: #fff; padding: 10px 18px;
     border-radius: 24px; font-size: 13px; font-weight: 600;
     box-shadow: 0 8px 20px rgba(0,0,0,0.25); z-index: 120; display: none;
-  }}
+  }
 </style>
 </head>
 <body>
@@ -372,11 +354,11 @@ html_app = f"""<!DOCTYPE html>
 </div>
 
 <script>
-  const DEFAULT_API_URL = "{api_url}";
+  const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzH2E3K16Ek1zjIKo33dXVcc6bEfO0DursTxqAPiIMWU3te5ArRFvXfUK57zDcAm0qX/exec";
   const ADMIN_PIN_CODE = "0571";
   const STAFF_PIN_CODE = "2008";
 
-  let state = {{
+  let state = {
     role: 'welcome',
     tab: 'home',
     apiUrl: localStorage.getItem('hallederiz_api_url') || DEFAULT_API_URL,
@@ -389,46 +371,46 @@ html_app = f"""<!DOCTYPE html>
     myName: localStorage.getItem('hallederiz_user_name') || '',
     staffUnit: localStorage.getItem('hallederiz_staff_unit') || 'Bilgi İşlem Birimi',
     tasks: JSON.parse(localStorage.getItem('hallederiz_demo_tasks') || 'null') || []
-  }};
+  };
 
-  function showToast(msg) {{
+  function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.style.display = 'block';
-    setTimeout(() => {{ t.style.display = 'none'; }}, 2800);
-  }}
+    setTimeout(() => { t.style.display = 'none'; }, 2800);
+  }
 
-  function updateConnBadge() {{
+  function updateConnBadge() {
     const dot = document.getElementById('connDot');
     const txt = document.getElementById('connText');
-    if (state.apiUrl) {{
+    if (state.apiUrl) {
       dot.classList.add('live');
       txt.textContent = 'Canlı E-Tablo';
-    }} else {{
+    } else {
       dot.classList.remove('live');
       txt.textContent = 'Demo Mod';
-    }}
-  }}
+    }
+  }
 
-  function updateMasterBar() {{
+  function updateMasterBar() {
     const bar = document.getElementById('masterBar');
-    if (state.adminUnlocked) {{
+    if (state.adminUnlocked) {
       bar.classList.add('show');
-      ['teacher', 'staff', 'admin'].forEach(r => {{
+      ['teacher', 'staff', 'admin'].forEach(r => {
         const btn = document.getElementById('mbtn-' + r);
         if (btn) btn.classList.toggle('active', state.role === r);
-      }});
-    }} else {{
+      });
+    } else {
       bar.classList.remove('show');
-    }}
-  }}
+    }
+  }
 
-  function openApiModal() {{
+  function openApiModal() {
     document.getElementById('apiUrlInput').value = state.apiUrl;
     document.getElementById('apiModal').classList.add('show');
-  }}
-  function closeApiModal() {{ document.getElementById('apiModal').classList.remove('show'); }}
-  function saveApiUrl() {{
+  }
+  function closeApiModal() { document.getElementById('apiModal').classList.remove('show'); }
+  function saveApiUrl() {
     const val = document.getElementById('apiUrlInput').value.trim() || DEFAULT_API_URL;
     state.apiUrl = val;
     localStorage.setItem('hallederiz_api_url', val);
@@ -436,8 +418,8 @@ html_app = f"""<!DOCTYPE html>
     updateConnBadge();
     showToast('Canlı veritabanı bağlantısı güncellendi.');
     syncFromServer();
-  }}
-  function resetDefaultApiUrl() {{
+  }
+  function resetDefaultApiUrl() {
     state.apiUrl = DEFAULT_API_URL;
     localStorage.setItem('hallederiz_api_url', DEFAULT_API_URL);
     document.getElementById('apiUrlInput').value = DEFAULT_API_URL;
@@ -445,50 +427,50 @@ html_app = f"""<!DOCTYPE html>
     updateConnBadge();
     showToast('Varsayılan canlı bağlantıya dönüldü.');
     syncFromServer();
-  }}
+  }
 
-  function saveDemo() {{
+  function saveDemo() {
     localStorage.setItem('hallederiz_demo_tasks', JSON.stringify(state.tasks));
-  }}
+  }
 
-  async function syncFromServer() {{
-    if (state.role === 'welcome') {{ render(); return; }}
-    if (!state.apiUrl) {{ render(); return; }}
-    try {{
+  async function syncFromServer() {
+    if (state.role === 'welcome') { render(); return; }
+    if (!state.apiUrl) { render(); return; }
+    try {
       let action = 'public_feed';
-      let url = `${{state.apiUrl}}?action=${{action}}`;
-      if (state.adminUnlocked) {{
-        url = `${{state.apiUrl}}?action=admin_all&pin=${{encodeURIComponent(state.adminPin)}}`;
-      }} else if (state.role === 'staff' && state.staffUnlocked) {{
-        url = `${{state.apiUrl}}?action=staff_tasks`;
-      }}
+      let url = `${state.apiUrl}?action=${action}`;
+      if (state.adminUnlocked) {
+        url = `${state.apiUrl}?action=admin_all&pin=${encodeURIComponent(state.adminPin)}`;
+      } else if (state.role === 'staff' && state.staffUnlocked) {
+        url = `${state.apiUrl}?action=staff_tasks`;
+      }
       const res = await fetch(url);
       const data = await res.json();
-      if (data.status === 'ok') {{
+      if (data.status === 'ok') {
         if (data.publicFeedEnabled !== undefined) state.publicFeedEnabled = data.publicFeedEnabled;
-        if (data.tasks) {{
+        if (data.tasks) {
           state.tasks = data.tasks;
           saveDemo();
-        }}
-        if (data.feed) {{
+        }
+        if (data.feed) {
           const nonSolved = state.tasks.filter(t => t.durum !== 'Çözüldü');
           state.tasks = [...nonSolved, ...data.feed];
           saveDemo();
-        }}
-      }}
-    }} catch (e) {{
+        }
+      }
+    } catch (e) {
       showToast('Sunucu senkronizasyon hatası, önbellek gösteriliyor.');
-    }}
+    }
     render();
-  }}
+  }
 
-  function switchRole(role) {{
-    if (role !== 'admin' && !state.adminUnlocked) {{
+  function switchRole(role) {
+    if (role !== 'admin' && !state.adminUnlocked) {
       state.adminPin = '';
-    }}
-    if (role !== 'staff') {{
+    }
+    if (role !== 'staff') {
       state.staffUnlocked = false;
-    }}
+    }
     state.role = role;
     state.tab = 'home';
     document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
@@ -496,31 +478,31 @@ html_app = f"""<!DOCTYPE html>
     if (activeBtn) activeBtn.classList.add('active');
     updateMasterBar();
     syncFromServer();
-  }}
+  }
 
-  function switchTab(tab) {{
+  function switchTab(tab) {
     state.tab = tab;
     render();
-  }}
+  }
 
-  function progressLabel(durum) {{
+  function progressLabel(durum) {
     if (durum === 'Çözüldü') return 'sonuçlandı';
     if (durum === 'İşlemde' || durum === 'Onay Bekliyor') return 'İşleme alındı';
     return 'iş sırası bekliyor';
-  }}
+  }
 
-  function statusBadge(durum) {{
-    const map = {{
+  function statusBadge(durum) {
+    const map = {
       'Beklemede': 'b-beklemede',
       'Atandı': 'b-atandi',
       'İşlemde': 'b-islemde',
       'Onay Bekliyor': 'b-onay',
       'Çözüldü': 'b-cozuldu'
-    }};
-    return `<span class="badge ${{map[durum] || 'b-beklemede'}}">${{durum}}</span>`;
-  }}
+    };
+    return `<span class="badge ${map[durum] || 'b-beklemede'}">${durum}</span>`;
+  }
 
-  function renderProgressCardItem(t) {{
+  function renderProgressCardItem(t) {
     const label = progressLabel(t.durum);
     const badgeClass = t.durum === 'Çözüldü'
       ? 'b-cozuldu'
@@ -529,51 +511,51 @@ html_app = f"""<!DOCTYPE html>
     return `
       <div class="task-item">
         <div class="task-top">
-          <span class="task-meta">${{t.id}} • ${{t.mekan}}${{t.tarih ? ' • ' + t.tarih : ''}}</span>
-          <span class="badge ${{badgeClass}}">${{label}}</span>
+          <span class="task-meta">${t.id} • ${t.mekan}${t.tarih ? ' • ' + t.tarih : ''}</span>
+          <span class="badge ${badgeClass}">${label}</span>
         </div>
-        <div class="task-title">${{t.konu}}</div>
-        ${{t.durum === 'Çözüldü' && t.cozum ? `<div style="font-size:12px; color:#065f46; background:#ecfdf5; padding:8px; border-radius:8px; margin-top:6px;"><strong>Onaylanan Sonuç:</strong> ${{t.cozum}}</div>` : ''}}
+        <div class="task-title">${t.konu}</div>
+        ${t.durum === 'Çözüldü' && t.cozum ? `<div style="font-size:12px; color:#065f46; background:#ecfdf5; padding:8px; border-radius:8px; margin-top:6px;"><strong>Onaylanan Sonuç:</strong> ${t.cozum}</div>` : ''}
       </div>
     `;
-  }}
+  }
 
-  function renderCappedList(items, emptyText, moreLabelPrefix) {{
-    if (!items.length) {{
-      return `<p style="font-size:13px; color:var(--muted);">${{emptyText}}</p>`;
-    }}
+  function renderCappedList(items, emptyText, moreLabelPrefix) {
+    if (!items.length) {
+      return `<p style="font-size:13px; color:var(--muted);">${emptyText}</p>`;
+    }
     const topThree = items.slice(0, 3);
     const rest = items.slice(3);
     let html = topThree.map(renderProgressCardItem).join('');
-    if (rest.length > 0) {{
+    if (rest.length > 0) {
       html += `
         <details class="more-drawer">
           <summary>
-            <span>${{moreLabelPrefix}} (${{rest.length}} işlem daha)</span>
+            <span>${moreLabelPrefix} (${rest.length} işlem daha)</span>
             <span>▼</span>
           </summary>
           <div class="more-drawer-body">
-            ${{rest.map(renderProgressCardItem).join('')}}
+            ${rest.map(renderProgressCardItem).join('')}
           </div>
         </details>
       `;
-    }}
+    }
     return html;
-  }}
+  }
 
-  function renderStepper(durum) {{
+  function renderStepper(durum) {
     const stages = ['Beklemede', 'Atandı', 'İşlemde', 'Çözüldü'];
     let idx = stages.indexOf(durum);
     if (durum === 'Onay Bekliyor') idx = 2;
     return `
       <div class="stepper">
-        ${{stages.map((_, i) => `<div class="step-bar ${{i < idx ? 'done' : (i === idx ? 'curr' : '')}}"></div>`).join('')}}
+        ${stages.map((_, i) => `<div class="step-bar ${i < idx ? 'done' : (i === idx ? 'curr' : '')}"></div>`).join('')}
       </div>
       <div class="step-labels"><span>Bildirildi</span><span>Atandı</span><span>İşlemde</span><span>Çözüldü</span></div>
     `;
-  }}
+  }
 
-  async function submitNewTask(e) {{
+  async function submitNewTask(e) {
     e.preventDefault();
     const mekan = document.getElementById('fMekan').value;
     const tur = document.getElementById('fTur').value;
@@ -587,98 +569,98 @@ html_app = f"""<!DOCTYPE html>
 
     const now = new Date();
     const tarih = now.toLocaleDateString('tr-TR') + ' ' + now.toTimeString().slice(0,5);
-    const newTask = {{
+    const newTask = {
       id: 'IS-' + Math.floor(1000 + Math.random() * 9000),
       tarih, bildiren, mekan, tur, aciliyet, konu,
       durum: 'Beklemede', atanan: '', cozum: '', kapanis: '', sureSaat: 0
-    }};
+    };
 
-    if (state.apiUrl) {{
-      try {{
-        await fetch(state.apiUrl, {{
+    if (state.apiUrl) {
+      try {
+        await fetch(state.apiUrl, {
           method: 'POST',
-          body: JSON.stringify({{ action: 'create', bildiren, mekan, tur, aciliyet, konu }})
-        }});
+          body: JSON.stringify({ action: 'create', bildiren, mekan, tur, aciliyet, konu })
+        });
         state.tasks.unshift(newTask);
         saveDemo();
         showToast('Bildirim canlı veritabanına kaydedildi.');
         await syncFromServer();
-      }} catch (err) {{
+      } catch (err) {
         showToast('Bağlantı hatası oluştu.');
-      }}
-    }} else {{
+      }
+    } else {
       state.tasks.unshift(newTask);
       saveDemo();
       showToast('Bildirim yüksekokul idaresine iletildi.');
       render();
-    }}
+    }
     document.getElementById('fKonu').value = '';
-  }}
+  }
 
-  async function updateTask(id, updates) {{
-    if (state.apiUrl) {{
-      try {{
-        const res = await fetch(state.apiUrl, {{
+  async function updateTask(id, updates) {
+    if (state.apiUrl) {
+      try {
+        const res = await fetch(state.apiUrl, {
           method: 'POST',
-          body: JSON.stringify({{ action: 'update', id, pin: state.adminPin, ...updates }})
-        }});
+          body: JSON.stringify({ action: 'update', id, pin: state.adminPin, ...updates })
+        });
         const data = await res.json();
-        if (data.status === 'ok') {{
+        if (data.status === 'ok') {
           showToast('Kayıt güncellendi.');
           await syncFromServer();
-        }} else {{
+        } else {
           showToast(data.message || 'Yetki hatası.');
-        }}
-      }} catch (e) {{
+        }
+      } catch (e) {
         showToast('Sunucu güncelleme hatası.');
-      }}
-    }} else {{
+      }
+    } else {
       const t = state.tasks.find(x => x.id === id);
-      if (t) {{
+      if (t) {
         Object.assign(t, updates);
-        if (updates.durum === 'Çözüldü') {{
+        if (updates.durum === 'Çözüldü') {
           t.kapanis = new Date().toLocaleDateString('tr-TR') + ' ' + new Date().toTimeString().slice(0,5);
           t.sureSaat = Number((Math.random() * 4 + 0.5).toFixed(1));
-        }}
+        }
         saveDemo();
         showToast('İşlem güncellendi.');
         render();
-      }}
-    }}
-  }}
+      }
+    }
+  }
 
-  function unlockStaff() {{
+  function unlockStaff() {
     const val = document.getElementById('staffPinInput').value.trim();
-    if (val === STAFF_PIN_CODE) {{
+    if (val === STAFF_PIN_CODE) {
       state.staffUnlocked = true;
       showToast('Sorumlu Personel oturumu açıldı.');
       syncFromServer();
-    }} else if (val === ADMIN_PIN_CODE) {{
+    } else if (val === ADMIN_PIN_CODE) {
       state.adminUnlocked = true;
       state.adminPin = val;
       state.staffUnlocked = true;
       updateMasterBar();
       showToast('İdari şifre doğrulandı. Tüm menüler aktif.');
       syncFromServer();
-    }} else {{
+    } else {
       showToast('Hatalı şifre!');
-    }}
-  }}
+    }
+  }
 
-  function unlockAdmin() {{
+  function unlockAdmin() {
     const val = document.getElementById('pinInput').value.trim();
-    if (val === ADMIN_PIN_CODE) {{
+    if (val === ADMIN_PIN_CODE) {
       state.adminUnlocked = true;
       state.adminPin = val;
       updateMasterBar();
       showToast('İdari oturumu açıldı. Tüm menüler aktif.');
       syncFromServer();
-    }} else {{
+    } else {
       showToast('Hatalı PIN kodu!');
-    }}
-  }}
+    }
+  }
 
-  function lockAllPrivileged() {{
+  function lockAllPrivileged() {
     state.adminUnlocked = false;
     state.staffUnlocked = false;
     state.adminPin = '';
@@ -688,77 +670,76 @@ html_app = f"""<!DOCTYPE html>
     updateMasterBar();
     showToast('Oturum kilitlendi.');
     render();
-  }}
+  }
 
-  async function toggleGlobalFeed(checked) {{
+  async function toggleGlobalFeed(checked) {
     state.publicFeedEnabled = checked;
-    if (state.apiUrl) {{
-      await fetch(state.apiUrl, {{
+    if (state.apiUrl) {
+      await fetch(state.apiUrl, {
         method: 'POST',
-        body: JSON.stringify({{ action: 'toggle_feed', pin: state.adminPin, enabled: checked }})
-      }});
-    }}
+        body: JSON.stringify({ action: 'toggle_feed', pin: state.adminPin, enabled: checked })
+      });
+    }
     showToast(checked ? 'Tamamlanan işlerin özeti personele açıldı.' : 'Genel tamamlanan iş akışı kapatıldı.');
     render();
-  }}
+  }
 
-  function exportCSV() {{
+  function exportCSV() {
     const headers = ['ID', 'Tarih', 'Bildiren', 'Mekan', 'Tur', 'Aciliyet', 'Konu', 'Durum', 'Atanan_Birim', 'Cozum_Notu', 'Sure_Saat'];
     const rows = state.tasks.map(t => [
       t.id, t.tarih, t.bildiren, t.mekan, t.tur, t.aciliyet,
-      `"${{(t.konu || '').replace(/"/g, '""')}}"`,
+      `"${(t.konu || '').replace(/"/g, '""')}"`,
       t.durum, t.atanan,
-      `"${{(t.cozum || '').replace(/"/g, '""')}}"`,
+      `"${(t.cozum || '').replace(/"/g, '""')}"`,
       t.sureSaat || ''
     ].join(';'));
-    const csv = '\\uFEFF' + [headers.join(';'), ...rows].join('\\n');
-    const blob = new Blob([csv], {{ type: 'text/csv;charset=utf-8;' }});
+    const csv = '\uFEFF' + [headers.join(';'), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'hallederiz_v1_rapor.csv';
     a.click();
-  }}
+  }
 
-  function renderNav() {{
+  function renderNav() {
     updateMasterBar();
     const nav = document.getElementById('bottomNav');
 
-    if (state.role === 'teacher' && !state.adminUnlocked) {{
+    if (state.role === 'teacher' && !state.adminUnlocked) {
       nav.classList.add('hidden');
       nav.innerHTML = '';
       return;
-    }}
+    }
 
-    if (state.role === 'staff' && (state.staffUnlocked || state.adminUnlocked)) {{
+    if (state.role === 'staff' && (state.staffUnlocked || state.adminUnlocked)) {
       nav.classList.remove('hidden');
       nav.innerHTML = `
-        <button class="nav-item ${{state.tab==='home'?'active':''}}" onclick="switchTab('home')"><span class="nav-icon">🔧</span>Görevlerim</button>
-        <button class="nav-item ${{state.tab==='list'?'active':''}}" onclick="switchTab('list')"><span class="nav-icon">✅</span>Tamamlananlar</button>
-        <button class="nav-item ${{state.tab==='settings'?'active':''}}" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span>Ayarlar</button>
+        <button class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')"><span class="nav-icon">🔧</span>Görevlerim</button>
+        <button class="nav-item ${state.tab==='list'?'active':''}" onclick="switchTab('list')"><span class="nav-icon">✅</span>Tamamlananlar</button>
+        <button class="nav-item ${state.tab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span>Ayarlar</button>
       `;
       return;
-    }}
+    }
 
-    if (state.role === 'admin' && state.adminUnlocked) {{
+    if (state.role === 'admin' && state.adminUnlocked) {
       nav.classList.remove('hidden');
       nav.innerHTML = `
-        <button class="nav-item ${{state.tab==='home'?'active':''}}" onclick="switchTab('home')"><span class="nav-icon">📥</span>İş Yönetimi</button>
-        <button class="nav-item ${{state.tab==='stats'?'active':''}}" onclick="switchTab('stats')"><span class="nav-icon">📊</span>İstatistikler</button>
-        <button class="nav-item ${{state.tab==='settings'?'active':''}}" onclick="switchTab('settings')"><span class="nav-icon">🛡️</span>Yetki & Ayar</button>
+        <button class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')"><span class="nav-icon">📥</span>İş Yönetimi</button>
+        <button class="nav-item ${state.tab==='stats'?'active':''}" onclick="switchTab('stats')"><span class="nav-icon">📊</span>İstatistikler</button>
+        <button class="nav-item ${state.tab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="nav-icon">🛡️</span>Yetki & Ayar</button>
       `;
       return;
-    }}
+    }
 
     nav.classList.add('hidden');
     nav.innerHTML = '';
-  }}
+  }
 
-  function render() {{
+  function render() {
     renderNav();
     const main = document.getElementById('appMain');
-    const notifyChecked = !state.userNotifyAll ? 'checked' : '';
 
-    if (state.role === 'welcome') {{
+    if (state.role === 'welcome') {
       main.innerHTML = `
         <div class="card" style="max-width:520px; margin:24px auto; text-align:center;">
           <div class="card-title" style="justify-content:center;">Rol Seçimi Yapınız</div>
@@ -773,9 +754,9 @@ html_app = f"""<!DOCTYPE html>
         </div>
       `;
       return;
-    }}
+    }
 
-    if (state.role === 'teacher') {{
+    if (state.role === 'teacher') {
       const progressItems = state.tasks.filter(t => t.durum === 'Çözüldü' || !state.myName || t.bildiren === state.myName);
 
       main.innerHTML = `
@@ -784,13 +765,55 @@ html_app = f"""<!DOCTYPE html>
           <form onsubmit="submitNewTask(event)">
             <div class="form-group">
               <label>Bildirimde Bulunan Personel</label>
-              <input type="text" id="fBildiren" value="${{state.myName}}" placeholder="Ad Soyad / Unvan yazınız..." required>
+              <input type="text" id="fBildiren" value="${state.myName}" placeholder="Ad Soyad / Unvan yazınız..." required>
             </div>
             <div class="row-2">
               <div class="form-group">
                 <label>Mekan / Birim</label>
                 <select id="fMekan">
-                  {options_html}
+                  <option>D101</option>
+                    <option>D102</option>
+                    <option>D103</option>
+                    <option>D104</option>
+                    <option>D105</option>
+                    <option>D201</option>
+                    <option>D202</option>
+                    <option>D203</option>
+                    <option>D204</option>
+                    <option>D205</option>
+                    <option>DZ01</option>
+                    <option>DB01</option>
+                    <option>L106 PC Lab</option>
+                    <option>L107 PC Lab</option>
+                    <option>L206 PC Lab</option>
+                    <option>L207 PC Lab</option>
+                    <option>Hidrolik Lab</option>
+                    <option>Kontrol Lab</option>
+                    <option>Kaynak Lab</option>
+                    <option>Elektrik Lab</option>
+                    <option>Elektronik Lab</option>
+                    <option>Gemi Mak. Lab.</option>
+                    <option>Gemi Lab(-2)</option>
+                    <option>H101</option>
+                    <option>H102</option>
+                    <option>H103</option>
+                    <option>H104</option>
+                    <option>H105</option>
+                    <option>H201</option>
+                    <option>H202</option>
+                    <option>H203</option>
+                    <option>H204</option>
+                    <option>H205</option>
+                    <option>Toplantı Odası</option>
+                    <option>Personel Odası(-1)</option>
+                    <option>Müdür</option>
+                    <option>Mdr. Yrd-1</option>
+                    <option>Mdr. Yrd.-2</option>
+                    <option>Danışma</option>
+                    <option>Öğrenci Klüp1</option>
+                    <option>Öğrenci Klüp2</option>
+                    <option>Öğrenci İşleri</option>
+                    <option>Diğer</option>
                 </select>
               </div>
               <div class="form-group">
@@ -821,15 +844,15 @@ html_app = f"""<!DOCTYPE html>
         <div class="card">
           <div class="card-title">
             <span>Taleplerin İlerleme Süreci</span>
-            <span style="font-size:11px; color:var(--muted); font-weight:600;">Son ${{Math.min(progressItems.length, 3)}} / ${{progressItems.length}}</span>
+            <span style="font-size:11px; color:var(--muted); font-weight:600;">Son ${Math.min(progressItems.length, 3)} / ${progressItems.length}</span>
           </div>
-          ${{renderCappedList(progressItems, 'Henüz takip edilen bir talep bulunmuyor.', 'Tüm İşlemleri Göster')}}
+          ${renderCappedList(progressItems, 'Henüz takip edilen bir talep bulunmuyor.', 'Tüm İşlemleri Göster')}
         </div>
       `;
-    }}
+    }
 
-    else if (state.role === 'staff') {{
-      if (!state.staffUnlocked && !state.adminUnlocked) {{
+    else if (state.role === 'staff') {
+      if (!state.staffUnlocked && !state.adminUnlocked) {
         main.innerHTML = `
           <div class="card" style="max-width:400px; margin:24px auto; text-align:center;">
             <div style="font-size:32px; margin-bottom:8px;">🔐</div>
@@ -842,51 +865,51 @@ html_app = f"""<!DOCTYPE html>
           </div>
         `;
         return;
-      }}
+      }
 
-      if (state.tab === 'home') {{
+      if (state.tab === 'home') {
         const activeTasks = state.tasks.filter(t => t.durum === 'Atandı' || t.durum === 'İşlemde' || t.durum === 'Onay Bekliyor');
         main.innerHTML = `
           <div class="card">
-            <div class="card-title">Atanan Aktif Görevler (${{activeTasks.length}})</div>
-            ${{activeTasks.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Şu an üzerinizde bekleyen aktif görev bulunmuyor.</p>' : activeTasks.map(t => `
+            <div class="card-title">Atanan Aktif Görevler (${activeTasks.length})</div>
+            ${activeTasks.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Şu an üzerinizde bekleyen aktif görev bulunmuyor.</p>' : activeTasks.map(t => `
               <div class="task-item">
                 <div class="task-top">
-                  <span class="task-meta">${{t.id}} • ${{t.mekan}} • Birim: ${{t.atanan || 'Genel'}}</span>
-                  ${{statusBadge(t.durum)}}
+                  <span class="task-meta">${t.id} • ${t.mekan} • Birim: ${t.atanan || 'Genel'}</span>
+                  ${statusBadge(t.durum)}
                 </div>
-                <div class="task-title">${{t.konu}}</div>
-                ${{t.durum === 'Atandı' ? `
-                  <button class="btn btn-cyan btn-sm" onclick="updateTask('${{t.id}}', {{ durum: 'İşlemde' }})">▶ İşleme Al</button>
-                ` : ''}}
-                ${{t.durum === 'İşlemde' ? `
+                <div class="task-title">${t.konu}</div>
+                ${t.durum === 'Atandı' ? `
+                  <button class="btn btn-cyan btn-sm" onclick="updateTask('${t.id}', { durum: 'İşlemde' })">▶ İşleme Al</button>
+                ` : ''}
+                ${t.durum === 'İşlemde' ? `
                   <div style="margin-top:8px;">
-                    <input type="text" id="sol-${{t.id}}" placeholder="Yapılan işlemi kısaca yazın..." style="margin-bottom:8px;">
-                    <button class="btn btn-green btn-sm" onclick="const v=document.getElementById('sol-${{t.id}}').value.trim(); if(!v){{showToast('Çözüm açıklaması giriniz.');return;}} updateTask('${{t.id}}', {{ durum: 'Onay Bekliyor', cozum: v }})">✓ Tamamlandı Olarak Gönder</button>
+                    <input type="text" id="sol-${t.id}" placeholder="Yapılan işlemi kısaca yazın..." style="margin-bottom:8px;">
+                    <button class="btn btn-green btn-sm" onclick="const v=document.getElementById('sol-${t.id}').value.trim(); if(!v){showToast('Çözüm açıklaması giriniz.');return;} updateTask('${t.id}', { durum: 'Onay Bekliyor', cozum: v })">✓ Tamamlandı Olarak Gönder</button>
                   </div>
-                ` : ''}}
-                ${{t.durum === 'Onay Bekliyor' ? `<div style="font-size:12px; color:#9a3412;"><strong>Girilen Çözüm:</strong> ${{t.cozum}} (İdare onayı bekleniyor)</div>` : ''}}
+                ` : ''}
+                ${t.durum === 'Onay Bekliyor' ? `<div style="font-size:12px; color:#9a3412;"><strong>Girilen Çözüm:</strong> ${t.cozum} (İdare onayı bekleniyor)</div>` : ''}
               </div>
-            `).join('')}}
+            `).join('')}
           </div>
         `;
-      }} else if (state.tab === 'list') {{
+      } else if (state.tab === 'list') {
         const solved = (state.publicFeedEnabled && state.userShowPublicFeed) ? state.tasks.filter(t => t.durum === 'Çözüldü') : [];
         main.innerHTML = `
           <div class="card">
             <div class="card-title">Tamamlanan İşler (Konu & Sonuç)</div>
-            ${{!state.publicFeedEnabled ? '<p style="font-size:13px; color:var(--muted);">Tamamlanan işlerin genel görünümü yüksekokul idaresi tarafından kapatılmıştır.</p>' :
+            ${!state.publicFeedEnabled ? '<p style="font-size:13px; color:var(--muted);">Tamamlanan işlerin genel görünümü yüksekokul idaresi tarafından kapatılmıştır.</p>' :
               solved.map(t => `
                 <div class="task-item">
-                  <div class="task-top"><span class="task-meta">${{t.mekan}}</span>${{statusBadge('Çözüldü')}}</div>
-                  <div class="task-title">${{t.konu}}</div>
-                  <div style="font-size:12px;"><strong>Sonuç:</strong> ${{t.cozum}}</div>
+                  <div class="task-top"><span class="task-meta">${t.mekan}</span>${statusBadge('Çözüldü')}</div>
+                  <div class="task-title">${t.konu}</div>
+                  <div style="font-size:12px;"><strong>Sonuç:</strong> ${t.cozum}</div>
                 </div>
               `).join('')
-            }}
+            }
           </div>
         `;
-      }} else {{
+      } else {
         main.innerHTML = `
           <div class="card">
             <div class="card-title">Personel Akış Tercihi</div>
@@ -896,7 +919,7 @@ html_app = f"""<!DOCTYPE html>
                 <div style="font-size:11px; color:var(--muted);">İdare izin verdiğinde sonuçlanan işleri listeler.</div>
               </div>
               <label class="switch">
-                <input type="checkbox" ${{state.userShowPublicFeed ? 'checked' : ''}} onchange="state.userShowPublicFeed=this.checked; localStorage.setItem('hallederiz_user_feed', this.checked); render();">
+                <input type="checkbox" ${state.userShowPublicFeed ? 'checked' : ''} onchange="state.userShowPublicFeed=this.checked; localStorage.setItem('hallederiz_user_feed', this.checked); render();">
                 <span class="slider"></span>
               </label>
             </div>
@@ -905,11 +928,11 @@ html_app = f"""<!DOCTYPE html>
             </div>
           </div>
         `;
-      }}
-    }}
+      }
+    }
 
-    else {{
-      if (!state.adminUnlocked) {{
+    else {
+      if (!state.adminUnlocked) {
         main.innerHTML = `
           <div class="card" style="max-width:400px; margin:24px auto; text-align:center;">
             <div style="font-size:32px; margin-bottom:8px;">🔐</div>
@@ -922,58 +945,58 @@ html_app = f"""<!DOCTYPE html>
           </div>
         `;
         return;
-      }}
+      }
 
-      if (state.tab === 'home') {{
+      if (state.tab === 'home') {
         main.innerHTML = `
           <div class="card">
             <div class="card-title">
-              <span>Gelen Talepler ve Süreç Yönetimi (${{state.tasks.length}})</span>
+              <span>Gelen Talepler ve Süreç Yönetimi (${state.tasks.length})</span>
               <button class="btn btn-outline btn-sm" onclick="syncFromServer()">↻ Yenile</button>
             </div>
-            ${{state.tasks.map(t => `
+            ${state.tasks.map(t => `
               <div class="task-item">
                 <div class="task-top">
-                  <span class="task-meta">${{t.id}} • ${{t.mekan}} • ${{t.bildiren || ''}}</span>
-                  ${{statusBadge(t.durum)}}
+                  <span class="task-meta">${t.id} • ${t.mekan} • ${t.bildiren || ''}</span>
+                  ${statusBadge(t.durum)}
                 </div>
-                <div class="task-title">${{t.konu}}</div>
-                ${{t.durum === 'Beklemede' ? `
+                <div class="task-title">${t.konu}</div>
+                ${t.durum === 'Beklemede' ? `
                   <div style="display:flex; gap:8px; margin-top:8px;">
-                    <select id="assign-${{t.id}}" style="padding:6px 8px; font-size:12px;">
+                    <select id="assign-${t.id}" style="padding:6px 8px; font-size:12px;">
                       <option>Bilgi İşlem Birimi</option>
                       <option>Teknik Servis</option>
                       <option>Destek ve Temizlik</option>
                       <option>İdari İşler</option>
                     </select>
-                    <button class="btn btn-primary btn-sm" onclick="updateTask('${{t.id}}', {{ durum: 'Atandı', atanan: document.getElementById('assign-${{t.id}}').value }})">Personele Ata</button>
+                    <button class="btn btn-primary btn-sm" onclick="updateTask('${t.id}', { durum: 'Atandı', atanan: document.getElementById('assign-${t.id}').value })">Personele Ata</button>
                   </div>
-                ` : ''}}
-                ${{t.durum === 'Onay Bekliyor' ? `
+                ` : ''}
+                ${t.durum === 'Onay Bekliyor' ? `
                   <div style="background:#fff7ed; padding:8px; border-radius:8px; font-size:12px; margin-top:6px;">
-                    <strong>Personel Çözümü (${{t.atanan}}):</strong> ${{t.cozum}}
+                    <strong>Personel Çözümü (${t.atanan}):</strong> ${t.cozum}
                     <div style="margin-top:8px;">
-                      <button class="btn btn-green btn-sm" onclick="updateTask('${{t.id}}', {{ durum: 'Çözüldü' }})">✓ Onayla & Öğretmene Bildir</button>
+                      <button class="btn btn-green btn-sm" onclick="updateTask('${t.id}', { durum: 'Çözüldü' })">✓ Onayla & Öğretmene Bildir</button>
                     </div>
                   </div>
-                ` : ''}}
-                ${{t.durum === 'Çözüldü' ? `<div style="font-size:12px; color:#065f46; margin-top:4px;"><strong>Çözüm (${{t.atanan}}):</strong> ${{t.cozum}}</div>` : ''}}
+                ` : ''}
+                ${t.durum === 'Çözüldü' ? `<div style="font-size:12px; color:#065f46; margin-top:4px;"><strong>Çözüm (${t.atanan}):</strong> ${t.cozum}</div>` : ''}
               </div>
-            `).join('')}}
+            `).join('')}
           </div>
         `;
-      }} else if (state.tab === 'stats') {{
+      } else if (state.tab === 'stats') {
         const total = state.tasks.length;
         const solvedList = state.tasks.filter(t => t.durum === 'Çözüldü');
         const avgHours = solvedList.length ? (solvedList.reduce((a, b) => a + (Number(b.sureSaat) || 0), 0) / solvedList.length).toFixed(1) : '0.0';
 
         const units = ['Bilgi İşlem Birimi', 'Teknik Servis', 'Destek ve Temizlik', 'İdari İşler'];
-        const unitStats = units.map(u => {{
+        const unitStats = units.map(u => {
           const allU = state.tasks.filter(t => t.atanan === u);
           const solU = allU.filter(t => t.durum === 'Çözüldü');
           const avgU = solU.length ? (solU.reduce((a, b) => a + (Number(b.sureSaat) || 0), 0) / solU.length).toFixed(1) + ' sa' : '-';
-          return {{ unit: u, assigned: allU.length, solved: solU.length, avg: avgU }};
-        }});
+          return { unit: u, assigned: allU.length, solved: solU.length, avg: avgU };
+        });
 
         main.innerHTML = `
           <div class="card">
@@ -982,28 +1005,28 @@ html_app = f"""<!DOCTYPE html>
               <button class="btn btn-cyan btn-sm" onclick="exportCSV()">📥 Excel / CSV İndir</button>
             </div>
             <div class="kpi-grid">
-              <div class="kpi-box"><div class="kpi-val">${{total}}</div><div class="kpi-lbl">Toplam İş</div></div>
-              <div class="kpi-box"><div class="kpi-val" style="color:var(--green)">${{solvedList.length}}</div><div class="kpi-lbl">Çözülen İş</div></div>
-              <div class="kpi-box"><div class="kpi-val" style="color:var(--cyan)">${{avgHours}} sa</div><div class="kpi-lbl">Ort. Çözüm Süresi</div></div>
+              <div class="kpi-box"><div class="kpi-val">${total}</div><div class="kpi-lbl">Toplam İş</div></div>
+              <div class="kpi-box"><div class="kpi-val" style="color:var(--green)">${solvedList.length}</div><div class="kpi-lbl">Çözülen İş</div></div>
+              <div class="kpi-box"><div class="kpi-val" style="color:var(--cyan)">${avgHours} sa</div><div class="kpi-lbl">Ort. Çözüm Süresi</div></div>
             </div>
             <table>
               <thead>
                 <tr><th>Sorumlu Birim</th><th>Atanan</th><th>Çözülen</th><th>Ort. Süre</th></tr>
               </thead>
               <tbody>
-                ${{unitStats.map(s => `
+                ${unitStats.map(s => `
                   <tr>
-                    <td><strong>${{s.unit}}</strong></td>
-                    <td>${{s.assigned}}</td>
-                    <td>${{s.solved}}</td>
-                    <td>${{s.avg}}</td>
+                    <td><strong>${s.unit}</strong></td>
+                    <td>${s.assigned}</td>
+                    <td>${s.solved}</td>
+                    <td>${s.avg}</td>
                   </tr>
-                `).join('')}}
+                `).join('')}
               </tbody>
             </table>
           </div>
         `;
-      }} else {{
+      } else {
         main.innerHTML = `
           <div class="card">
             <div class="card-title">Yüksekokul Geneli Görünürlük Ayarı</div>
@@ -1013,7 +1036,7 @@ html_app = f"""<!DOCTYPE html>
                 <div style="font-size:11px; color:var(--muted);">Açık olduğunda personel yalnızca işin konusu ve sonucunu isteğe bağlı görebilir. İstatistikler her zaman gizlidir.</div>
               </div>
               <label class="switch">
-                <input type="checkbox" ${{state.publicFeedEnabled ? 'checked' : ''}} onchange="toggleGlobalFeed(this.checked)">
+                <input type="checkbox" ${state.publicFeedEnabled ? 'checked' : ''} onchange="toggleGlobalFeed(this.checked)">
                 <span class="slider"></span>
               </label>
             </div>
@@ -1022,18 +1045,12 @@ html_app = f"""<!DOCTYPE html>
             </div>
           </div>
         `;
-      }}
-    }}
-  }}
+      }
+    }
+  }
 
   updateConnBadge();
   syncFromServer();
 </script>
 </body>
 </html>
-"""
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html_app)
-
-print("Updated index.html with staff PIN 2008 and admin master menu access.")
