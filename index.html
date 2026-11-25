@@ -50,8 +50,17 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    cursor: pointer;
     border: 1px solid rgba(255,255,255,0.2);
+    user-select: none;
+  }
+  .status-pill.locked {
+    cursor: default;
+    opacity: 0.92;
+  }
+  .status-pill.unlocked {
+    cursor: pointer;
+    background: rgba(16,185,129,0.22);
+    border-color: rgba(16,185,129,0.55);
   }
   .dot-ind { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
   .dot-ind.live { background: var(--green); }
@@ -304,10 +313,10 @@
         <div class="brand-sub">Sürmene Abdullah Kanca Meslek Yüksekokulu</div>
       </div>
     </div>
-    <button class="status-pill" onclick="openApiModal()" title="Veritabanı Bağlantı Ayarı">
-      <span class="dot-ind" id="connDot"></span>
-      <span id="connText">Bağlanıyor...</span>
-    </button>
+    <div class="status-pill locked" id="statusPill" onclick="handleStatusPillClick()" aria-disabled="true">
+      <span class="dot-ind live" id="connDot"></span>
+      <span id="connText">Canlı E-Tablo</span>
+    </div>
   </div>
 
   <div class="role-bar">
@@ -340,7 +349,7 @@
       <button class="btn btn-outline btn-sm" onclick="closeApiModal()">✕</button>
     </div>
     <p style="font-size:12px; color:var(--muted); margin-bottom:12px; line-height:1.5;">
-      Sabit canlı veritabanı bağlantısı tanımlanmıştır. İsterseniz özel bir <strong>/exec</strong> bağlantısı ile üzerine yazabilirsiniz.
+      İdari yetki ile canlı e-tablo erişimi açıldı. Google Apps Script <strong>/exec</strong> bağlantı URL'sini görüntüleyebilir veya güncelleyebilirsiniz.
     </p>
     <div class="form-group">
       <label>Google Apps Script Web Uygulaması URL'si</label>
@@ -355,7 +364,7 @@
 
 <script>
   const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzH2E3K16Ek1zjIKo33dXVcc6bEfO0DursTxqAPiIMWU3te5ArRFvXfUK57zDcAm0qX/exec";
-  const ADMIN_PIN_CODE = "0571";
+  const ADMIN_PIN_CODE = "1302";
   const STAFF_PIN_CODE = "2008";
 
   let state = {
@@ -381,15 +390,29 @@
   }
 
   function updateConnBadge() {
+    const pill = document.getElementById('statusPill');
     const dot = document.getElementById('connDot');
     const txt = document.getElementById('connText');
-    if (state.apiUrl) {
-      dot.classList.add('live');
-      txt.textContent = 'Canlı E-Tablo';
+
+    dot.classList.add('live');
+    txt.textContent = 'Canlı E-Tablo';
+
+    if (state.adminUnlocked) {
+      pill.classList.remove('locked');
+      pill.classList.add('unlocked');
+      pill.setAttribute('aria-disabled', 'false');
+      pill.setAttribute('title', 'E-Tablo Bağlantı Ayarını Aç');
     } else {
-      dot.classList.remove('live');
-      txt.textContent = 'Demo Mod';
+      pill.classList.remove('unlocked');
+      pill.classList.add('locked');
+      pill.setAttribute('aria-disabled', 'true');
+      pill.removeAttribute('title');
     }
+  }
+
+  function handleStatusPillClick() {
+    if (!state.adminUnlocked) return;
+    openApiModal();
   }
 
   function updateMasterBar() {
@@ -406,11 +429,13 @@
   }
 
   function openApiModal() {
+    if (!state.adminUnlocked) return;
     document.getElementById('apiUrlInput').value = state.apiUrl;
     document.getElementById('apiModal').classList.add('show');
   }
   function closeApiModal() { document.getElementById('apiModal').classList.remove('show'); }
   function saveApiUrl() {
+    if (!state.adminUnlocked) return;
     const val = document.getElementById('apiUrlInput').value.trim() || DEFAULT_API_URL;
     state.apiUrl = val;
     localStorage.setItem('hallederiz_api_url', val);
@@ -420,6 +445,7 @@
     syncFromServer();
   }
   function resetDefaultApiUrl() {
+    if (!state.adminUnlocked) return;
     state.apiUrl = DEFAULT_API_URL;
     localStorage.setItem('hallederiz_api_url', DEFAULT_API_URL);
     document.getElementById('apiUrlInput').value = DEFAULT_API_URL;
@@ -434,6 +460,7 @@
   }
 
   async function syncFromServer() {
+    updateConnBadge();
     if (state.role === 'welcome') { render(); return; }
     if (!state.apiUrl) { render(); return; }
     try {
@@ -468,7 +495,7 @@
     if (role !== 'admin' && !state.adminUnlocked) {
       state.adminPin = '';
     }
-    if (role !== 'staff') {
+    if (role !== 'staff' && !state.adminUnlocked) {
       state.staffUnlocked = false;
     }
     state.role = role;
@@ -639,8 +666,9 @@
       state.adminUnlocked = true;
       state.adminPin = val;
       state.staffUnlocked = true;
+      updateConnBadge();
       updateMasterBar();
-      showToast('İdari şifre doğrulandı. Tüm menüler aktif.');
+      showToast('İdari şifre doğrulandı. Tüm menüler ve E-Tablo erişimi aktif.');
       syncFromServer();
     } else {
       showToast('Hatalı şifre!');
@@ -652,8 +680,9 @@
     if (val === ADMIN_PIN_CODE) {
       state.adminUnlocked = true;
       state.adminPin = val;
+      updateConnBadge();
       updateMasterBar();
-      showToast('İdari oturumu açıldı. Tüm menüler aktif.');
+      showToast('İdari oturumu açıldı. Tüm menüler ve E-Tablo erişimi aktif.');
       syncFromServer();
     } else {
       showToast('Hatalı PIN kodu!');
@@ -661,12 +690,14 @@
   }
 
   function lockAllPrivileged() {
+    closeApiModal();
     state.adminUnlocked = false;
     state.staffUnlocked = false;
     state.adminPin = '';
     state.role = 'welcome';
     state.tab = 'home';
     document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    updateConnBadge();
     updateMasterBar();
     showToast('Oturum kilitlendi.');
     render();
@@ -693,7 +724,8 @@
       `"${(t.cozum || '').replace(/"/g, '""')}"`,
       t.sureSaat || ''
     ].join(';'));
-    const csv = '\uFEFF' + [headers.join(';'), ...rows].join('\n');
+    const csv = '﻿' + [headers.join(';'), ...rows].join('
+');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -736,6 +768,7 @@
   }
 
   function render() {
+    updateConnBadge();
     renderNav();
     const main = document.getElementById('appMain');
 
@@ -937,7 +970,7 @@
           <div class="card" style="max-width:400px; margin:24px auto; text-align:center;">
             <div style="font-size:32px; margin-bottom:8px;">🔐</div>
             <div class="card-title" style="justify-content:center;">Yüksekokul İdaresi Girişi</div>
-            <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">İdari şifre doğrulandıktan sonra tüm menüler açılır.</p>
+            <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">İdari şifre doğrulandıktan sonra tüm menüler ve tablo erişimi açılır.</p>
             <div class="form-group">
               <input type="password" id="pinInput" maxlength="6" placeholder="xxxx" style="text-align:center; font-size:18px; letter-spacing:4px;">
             </div>
