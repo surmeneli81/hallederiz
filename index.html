@@ -342,7 +342,7 @@
       <button type="button" class="btn btn-outline btn-sm" onclick="closeApiModal()">✕</button>
     </div>
     <p style="font-size:12px; color:var(--muted); margin-bottom:12px; line-height:1.5;">
-      İdari yetki ile canlı e-tablo erişimi açıldı. Google Apps Script <strong>/exec</strong> bağlantı URL'sini görüntüleyebilir veya güncelleyebilirsiniz.
+      İdari yetki ile canlı e-tablo erişimi aktif. Google Apps Script <strong>/exec</strong> bağlantı URL'sini görüntüleyebilir veya güncelleyebilirsiniz.
     </p>
     <div class="form-group">
       <label>Google Apps Script Web Uygulaması URL'si</label>
@@ -357,8 +357,7 @@
 
 <script>
   const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzH2E3K16Ek1zjIKo33dXVcc6bEfO0DursTxqAPiIMWU3te5ArRFvXfUK57zDcAm0qX/exec";
-  const ADMIN_PIN_CODE = "1302";
-  const STAFF_PIN_CODE = "2008";
+  const ADMIN_PIN_CODE = "0571";
 
   function safeStorageGet(key, fallback) {
     try {
@@ -388,7 +387,6 @@
     tab: 'home',
     apiUrl: safeStorageGet('hallederiz_api_url', DEFAULT_API_URL) || DEFAULT_API_URL,
     adminUnlocked: false,
-    staffUnlocked: false,
     adminPin: '',
     publicFeedEnabled: true,
     userShowPublicFeed: Boolean(safeParseJson(safeStorageGet('hallederiz_user_feed', 'true'), true)),
@@ -399,6 +397,10 @@
       ? safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'), [])
       : []
   };
+
+  function canAccessLiveSheet() {
+    return state.adminUnlocked === true && state.adminPin === ADMIN_PIN_CODE;
+  }
 
   function showToast(msg) {
     const t = document.getElementById('toast');
@@ -418,7 +420,7 @@
     if (txt) txt.textContent = 'Canlı E-Tablo';
 
     if (pill) {
-      if (state.adminUnlocked) {
+      if (canAccessLiveSheet()) {
         pill.classList.remove('locked');
         pill.classList.add('unlocked');
         pill.setAttribute('aria-disabled', 'false');
@@ -433,14 +435,14 @@
   }
 
   function handleStatusPillClick() {
-    if (!state.adminUnlocked) return;
+    if (!canAccessLiveSheet()) return;
     openApiModal();
   }
 
   function updateMasterBar() {
     const bar = document.getElementById('masterBar');
     if (!bar) return;
-    if (state.adminUnlocked) {
+    if (canAccessLiveSheet()) {
       bar.classList.add('show');
       ['teacher', 'staff', 'admin'].forEach(r => {
         const btn = document.getElementById('mbtn-' + r);
@@ -452,7 +454,7 @@
   }
 
   function openApiModal() {
-    if (!state.adminUnlocked) return;
+    if (!canAccessLiveSheet()) return;
     const inp = document.getElementById('apiUrlInput');
     const modal = document.getElementById('apiModal');
     if (inp) inp.value = state.apiUrl;
@@ -463,7 +465,7 @@
     if (modal) modal.classList.remove('show');
   }
   function saveApiUrl() {
-    if (!state.adminUnlocked) return;
+    if (!canAccessLiveSheet()) return;
     const inp = document.getElementById('apiUrlInput');
     const val = (inp ? inp.value.trim() : '') || DEFAULT_API_URL;
     state.apiUrl = val;
@@ -474,7 +476,7 @@
     syncFromServer();
   }
   function resetDefaultApiUrl() {
-    if (!state.adminUnlocked) return;
+    if (!canAccessLiveSheet()) return;
     state.apiUrl = DEFAULT_API_URL;
     safeStorageSet('hallederiz_api_url', DEFAULT_API_URL);
     const inp = document.getElementById('apiUrlInput');
@@ -491,22 +493,12 @@
 
   async function syncFromServer() {
     updateConnBadge();
-    if (state.role === 'welcome') {
-      render();
-      return;
-    }
-    if (!state.apiUrl) {
+    if (!canAccessLiveSheet() || !state.apiUrl) {
       render();
       return;
     }
     try {
-      let action = 'public_feed';
-      let url = `${state.apiUrl}?action=${action}`;
-      if (state.adminUnlocked) {
-        url = `${state.apiUrl}?action=admin_all&pin=${encodeURIComponent(state.adminPin)}`;
-      } else if (state.role === 'staff' && state.staffUnlocked) {
-        url = `${state.apiUrl}?action=staff_tasks`;
-      }
+      const url = `${state.apiUrl}?action=admin_all&pin=${encodeURIComponent(state.adminPin)}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
@@ -523,17 +515,15 @@
         }
       }
     } catch (e) {
-      showToast('Sunucu senkronizasyon hatası, önbellek gösteriliyor.');
+      showToast('Canlı e-tablo senkronizasyon hatası, yerel kayıtlar gösteriliyor.');
     }
     render();
   }
 
   function switchRole(role) {
-    if (role !== 'admin' && !state.adminUnlocked) {
+    if (role !== 'admin' && !canAccessLiveSheet()) {
       state.adminPin = '';
-    }
-    if (role !== 'staff' && !state.adminUnlocked) {
-      state.staffUnlocked = false;
+      state.adminUnlocked = false;
     }
     state.role = role;
     state.tab = 'home';
@@ -627,23 +617,23 @@
       durum: 'Beklemede', atanan: '', cozum: '', kapanis: '', sureSaat: 0
     };
 
-    if (state.apiUrl) {
+    state.tasks.unshift(newTask);
+    saveDemo();
+
+    if (canAccessLiveSheet() && state.apiUrl) {
       try {
         await fetch(state.apiUrl, {
           method: 'POST',
-          body: JSON.stringify({ action: 'create', bildiren, mekan, tur, aciliyet, konu })
+          body: JSON.stringify({ action: 'create', pin: state.adminPin, bildiren, mekan, tur, aciliyet, konu })
         });
-        state.tasks.unshift(newTask);
-        saveDemo();
-        showToast('Bildirim canlı veritabanına kaydedildi.');
+        showToast('Bildirim kaydedildi ve canlı e-tabloya gönderildi.');
         await syncFromServer();
       } catch (err) {
-        showToast('Bağlantı hatası oluştu.');
+        showToast('Bildirim kaydedildi (canlı e-tablo bağlantısı sağlanamadı).');
+        render();
       }
     } else {
-      state.tasks.unshift(newTask);
-      saveDemo();
-      showToast('Bildirim yüksekokul idaresine iletildi.');
+      showToast('Bildirim kaydedildi.');
       render();
     }
     const konuEl = document.getElementById('fKonu');
@@ -651,55 +641,33 @@
   }
 
   async function updateTask(id, updates) {
-    if (state.apiUrl) {
+    const t = state.tasks.find(x => x.id === id);
+    if (t) {
+      Object.assign(t, updates);
+      if (updates.durum === 'Çözüldü') {
+        t.kapanis = new Date().toLocaleDateString('tr-TR') + ' ' + new Date().toTimeString().slice(0,5);
+        t.sureSaat = Number((Math.random() * 4 + 0.5).toFixed(1));
+      }
+      saveDemo();
+    }
+
+    if (canAccessLiveSheet() && state.apiUrl) {
       try {
         const res = await fetch(state.apiUrl, {
           method: 'POST',
           body: JSON.stringify({ action: 'update', id, pin: state.adminPin, ...updates })
         });
         const data = await res.json();
-        if (data.status === 'ok') {
-          showToast('Kayıt güncellendi.');
+        if (data && data.status === 'ok') {
+          showToast('Kayıt güncellendi ve canlı e-tabloya işlendi.');
           await syncFromServer();
-        } else {
-          showToast(data.message || 'Yetki hatası.');
+          return;
         }
-      } catch (e) {
-        showToast('Sunucu güncelleme hatası.');
-      }
-    } else {
-      const t = state.tasks.find(x => x.id === id);
-      if (t) {
-        Object.assign(t, updates);
-        if (updates.durum === 'Çözüldü') {
-          t.kapanis = new Date().toLocaleDateString('tr-TR') + ' ' + new Date().toTimeString().slice(0,5);
-          t.sureSaat = Number((Math.random() * 4 + 0.5).toFixed(1));
-        }
-        saveDemo();
-        showToast('İşlem güncellendi.');
-        render();
-      }
+      } catch (e) {}
     }
-  }
 
-  function unlockStaff() {
-    const inp = document.getElementById('staffPinInput');
-    const val = inp ? inp.value.trim() : '';
-    if (val === STAFF_PIN_CODE) {
-      state.staffUnlocked = true;
-      showToast('Sorumlu Personel oturumu açıldı.');
-      syncFromServer();
-    } else if (val === ADMIN_PIN_CODE) {
-      state.adminUnlocked = true;
-      state.adminPin = val;
-      state.staffUnlocked = true;
-      updateConnBadge();
-      updateMasterBar();
-      showToast('İdari şifre doğrulandı. Tüm menüler ve E-Tablo erişimi aktif.');
-      syncFromServer();
-    } else {
-      showToast('Hatalı şifre!');
-    }
+    showToast('İşlem güncellendi.');
+    render();
   }
 
   function unlockAdmin() {
@@ -710,30 +678,29 @@
       state.adminPin = val;
       updateConnBadge();
       updateMasterBar();
-      showToast('İdari oturumu açıldı. Tüm menüler ve E-Tablo erişimi aktif.');
+      showToast('İdare girişi başarılı. Canlı e-tablo erişimi aktif.');
       syncFromServer();
     } else {
-      showToast('Hatalı PIN kodu!');
+      showToast('Hatalı şifre! (İdare şifresi: 0571)');
     }
   }
 
   function lockAllPrivileged() {
     closeApiModal();
     state.adminUnlocked = false;
-    state.staffUnlocked = false;
     state.adminPin = '';
     state.role = 'welcome';
     state.tab = 'home';
     document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
     updateConnBadge();
     updateMasterBar();
-    showToast('Oturum kilitlendi.');
+    showToast('İdare oturumu kilitlendi.');
     render();
   }
 
   async function toggleGlobalFeed(checked) {
     state.publicFeedEnabled = checked;
-    if (state.apiUrl) {
+    if (canAccessLiveSheet() && state.apiUrl) {
       try {
         await fetch(state.apiUrl, {
           method: 'POST',
@@ -767,13 +734,7 @@
     const nav = document.getElementById('bottomNav');
     if (!nav) return;
 
-    if (state.role === 'teacher' && !state.adminUnlocked) {
-      nav.classList.add('hidden');
-      nav.innerHTML = '';
-      return;
-    }
-
-    if (state.role === 'staff' && (state.staffUnlocked || state.adminUnlocked)) {
+    if (state.role === 'staff' && canAccessLiveSheet()) {
       nav.classList.remove('hidden');
       nav.innerHTML = `
         <button type="button" class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')"><span class="nav-icon">🔧</span>Görevlerim</button>
@@ -783,7 +744,7 @@
       return;
     }
 
-    if (state.role === 'admin' && state.adminUnlocked) {
+    if (state.role === 'admin' && canAccessLiveSheet()) {
       nav.classList.remove('hidden');
       nav.innerHTML = `
         <button type="button" class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')"><span class="nav-icon">📥</span>İş Yönetimi</button>
@@ -916,16 +877,30 @@
     }
 
     else if (state.role === 'staff') {
-      if (!state.staffUnlocked && !state.adminUnlocked) {
+      if (!canAccessLiveSheet()) {
+        const activeTasks = state.tasks.filter(t => t.durum === 'Atandı' || t.durum === 'İşlemde' || t.durum === 'Onay Bekliyor');
         main.innerHTML = `
-          <div class="card" style="max-width:400px; margin:24px auto; text-align:center;">
-            <div style="font-size:32px; margin-bottom:8px;">🔐</div>
-            <div class="card-title" style="justify-content:center;">Sorumlu Personel Girişi</div>
-            <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">Sorumlu personel şifresini (veya idari şifreyi) giriniz.</p>
-            <div class="form-group">
-              <input type="password" id="staffPinInput" maxlength="6" placeholder="xxxx" style="text-align:center; font-size:18px; letter-spacing:4px;">
-            </div>
-            <button type="button" class="btn btn-primary" onclick="unlockStaff()">Giriş Yap</button>
+          <div class="card">
+            <div class="card-title">Atanan Aktif Görevler (${activeTasks.length})</div>
+            ${activeTasks.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Şu an üzerinizde bekleyen aktif görev bulunmuyor.</p>' : activeTasks.map(t => `
+              <div class="task-item">
+                <div class="task-top">
+                  <span class="task-meta">${t.id} • ${t.mekan} • Birim: ${t.atanan || 'Genel'}</span>
+                  ${statusBadge(t.durum)}
+                </div>
+                <div class="task-title">${t.konu}</div>
+                ${t.durum === 'Atandı' ? `
+                  <button type="button" class="btn btn-cyan btn-sm" onclick="updateTask('${t.id}', { durum: 'İşlemde' })">▶ İşleme Al</button>
+                ` : ''}
+                ${t.durum === 'İşlemde' ? `
+                  <div style="margin-top:8px;">
+                    <input type="text" id="sol-${t.id}" placeholder="Yapılan işlemi kısaca yazın..." style="margin-bottom:8px;">
+                    <button type="button" class="btn btn-green btn-sm" onclick="const v=document.getElementById('sol-${t.id}').value.trim(); if(!v){showToast('Çözüm açıklaması giriniz.');return;} updateTask('${t.id}', { durum: 'Onay Bekliyor', cozum: v })">✓ Tamamlandı Olarak Gönder</button>
+                  </div>
+                ` : ''}
+                ${t.durum === 'Onay Bekliyor' ? `<div style="font-size:12px; color:#9a3412;"><strong>Girilen Çözüm:</strong> ${t.cozum} (İdare onayı bekleniyor)</div>` : ''}
+              </div>
+            `).join('')}
           </div>
         `;
         return;
@@ -996,12 +971,12 @@
     }
 
     else {
-      if (!state.adminUnlocked) {
+      if (!canAccessLiveSheet()) {
         main.innerHTML = `
           <div class="card" style="max-width:400px; margin:24px auto; text-align:center;">
             <div style="font-size:32px; margin-bottom:8px;">🔐</div>
             <div class="card-title" style="justify-content:center;">Yüksekokul İdaresi Girişi</div>
-            <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">İdari şifre doğrulandıktan sonra tüm menüler ve tablo erişimi açılır.</p>
+            <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">İdare şifresini giriniz.</p>
             <div class="form-group">
               <input type="password" id="pinInput" maxlength="6" placeholder="xxxx" style="text-align:center; font-size:18px; letter-spacing:4px;">
             </div>
