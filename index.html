@@ -219,13 +219,6 @@
   details.more-drawer[open] > summary { border-bottom: 1px solid var(--border); background: #eff6ff; }
   .more-drawer-body { padding: 10px; background: #fff; }
 
-  /* Stepper */
-  .stepper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px; }
-  .step-bar { height: 5px; border-radius: 4px; background: #e2e8f0; }
-  .step-bar.done { background: var(--green); }
-  .step-bar.curr { background: var(--cyan); }
-  .step-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 4px; }
-
   /* Switch */
   .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
   .switch-row:last-child { border-bottom: none; }
@@ -367,26 +360,53 @@
   const ADMIN_PIN_CODE = "1302";
   const STAFF_PIN_CODE = "2008";
 
+  function safeStorageGet(key, fallback) {
+    try {
+      const v = localStorage.getItem(key);
+      return v === null ? fallback : v;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function safeStorageSet(key, val) {
+    try {
+      localStorage.setItem(key, val);
+    } catch (_) {}
+  }
+
+  function safeParseJson(str, fallback) {
+    try {
+      return JSON.parse(str);
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   let state = {
     role: 'welcome',
     tab: 'home',
-    apiUrl: localStorage.getItem('hallederiz_api_url') || DEFAULT_API_URL,
+    apiUrl: safeStorageGet('hallederiz_api_url', DEFAULT_API_URL) || DEFAULT_API_URL,
     adminUnlocked: false,
     staffUnlocked: false,
     adminPin: '',
     publicFeedEnabled: true,
-    userShowPublicFeed: JSON.parse(localStorage.getItem('hallederiz_user_feed') ?? 'true'),
-    userNotifyAll: JSON.parse(localStorage.getItem('hallederiz_user_notify_all') ?? 'false'),
-    myName: localStorage.getItem('hallederiz_user_name') || '',
-    staffUnit: localStorage.getItem('hallederiz_staff_unit') || 'Bilgi İşlem Birimi',
-    tasks: JSON.parse(localStorage.getItem('hallederiz_demo_tasks') || 'null') || []
+    userShowPublicFeed: Boolean(safeParseJson(safeStorageGet('hallederiz_user_feed', 'true'), true)),
+    userNotifyAll: Boolean(safeParseJson(safeStorageGet('hallederiz_user_notify_all', 'false'), false)),
+    myName: safeStorageGet('hallederiz_user_name', ''),
+    staffUnit: safeStorageGet('hallederiz_staff_unit', 'Bilgi İşlem Birimi'),
+    tasks: Array.isArray(safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'), []))
+      ? safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'), [])
+      : []
   };
 
   function showToast(msg) {
     const t = document.getElementById('toast');
+    if (!t) return;
     t.textContent = msg;
     t.style.display = 'block';
-    setTimeout(() => { t.style.display = 'none'; }, 2800);
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => { t.style.display = 'none'; }, 2800);
   }
 
   function updateConnBadge() {
@@ -394,19 +414,21 @@
     const dot = document.getElementById('connDot');
     const txt = document.getElementById('connText');
 
-    dot.classList.add('live');
-    txt.textContent = 'Canlı E-Tablo';
+    if (dot) dot.classList.add('live');
+    if (txt) txt.textContent = 'Canlı E-Tablo';
 
-    if (state.adminUnlocked) {
-      pill.classList.remove('locked');
-      pill.classList.add('unlocked');
-      pill.setAttribute('aria-disabled', 'false');
-      pill.setAttribute('title', 'E-Tablo Bağlantı Ayarını Aç');
-    } else {
-      pill.classList.remove('unlocked');
-      pill.classList.add('locked');
-      pill.setAttribute('aria-disabled', 'true');
-      pill.removeAttribute('title');
+    if (pill) {
+      if (state.adminUnlocked) {
+        pill.classList.remove('locked');
+        pill.classList.add('unlocked');
+        pill.setAttribute('aria-disabled', 'false');
+        pill.setAttribute('title', 'E-Tablo Bağlantı Ayarını Aç');
+      } else {
+        pill.classList.remove('unlocked');
+        pill.classList.add('locked');
+        pill.setAttribute('aria-disabled', 'true');
+        pill.removeAttribute('title');
+      }
     }
   }
 
@@ -417,6 +439,7 @@
 
   function updateMasterBar() {
     const bar = document.getElementById('masterBar');
+    if (!bar) return;
     if (state.adminUnlocked) {
       bar.classList.add('show');
       ['teacher', 'staff', 'admin'].forEach(r => {
@@ -430,15 +453,21 @@
 
   function openApiModal() {
     if (!state.adminUnlocked) return;
-    document.getElementById('apiUrlInput').value = state.apiUrl;
-    document.getElementById('apiModal').classList.add('show');
+    const inp = document.getElementById('apiUrlInput');
+    const modal = document.getElementById('apiModal');
+    if (inp) inp.value = state.apiUrl;
+    if (modal) modal.classList.add('show');
   }
-  function closeApiModal() { document.getElementById('apiModal').classList.remove('show'); }
+  function closeApiModal() {
+    const modal = document.getElementById('apiModal');
+    if (modal) modal.classList.remove('show');
+  }
   function saveApiUrl() {
     if (!state.adminUnlocked) return;
-    const val = document.getElementById('apiUrlInput').value.trim() || DEFAULT_API_URL;
+    const inp = document.getElementById('apiUrlInput');
+    const val = (inp ? inp.value.trim() : '') || DEFAULT_API_URL;
     state.apiUrl = val;
-    localStorage.setItem('hallederiz_api_url', val);
+    safeStorageSet('hallederiz_api_url', val);
     closeApiModal();
     updateConnBadge();
     showToast('Canlı veritabanı bağlantısı güncellendi.');
@@ -447,8 +476,9 @@
   function resetDefaultApiUrl() {
     if (!state.adminUnlocked) return;
     state.apiUrl = DEFAULT_API_URL;
-    localStorage.setItem('hallederiz_api_url', DEFAULT_API_URL);
-    document.getElementById('apiUrlInput').value = DEFAULT_API_URL;
+    safeStorageSet('hallederiz_api_url', DEFAULT_API_URL);
+    const inp = document.getElementById('apiUrlInput');
+    if (inp) inp.value = DEFAULT_API_URL;
     closeApiModal();
     updateConnBadge();
     showToast('Varsayılan canlı bağlantıya dönüldü.');
@@ -456,13 +486,19 @@
   }
 
   function saveDemo() {
-    localStorage.setItem('hallederiz_demo_tasks', JSON.stringify(state.tasks));
+    safeStorageSet('hallederiz_demo_tasks', JSON.stringify(state.tasks));
   }
 
   async function syncFromServer() {
     updateConnBadge();
-    if (state.role === 'welcome') { render(); return; }
-    if (!state.apiUrl) { render(); return; }
+    if (state.role === 'welcome') {
+      render();
+      return;
+    }
+    if (!state.apiUrl) {
+      render();
+      return;
+    }
     try {
       let action = 'public_feed';
       let url = `${state.apiUrl}?action=${action}`;
@@ -472,14 +508,15 @@
         url = `${state.apiUrl}?action=staff_tasks`;
       }
       const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-      if (data.status === 'ok') {
+      if (data && data.status === 'ok') {
         if (data.publicFeedEnabled !== undefined) state.publicFeedEnabled = data.publicFeedEnabled;
-        if (data.tasks) {
+        if (Array.isArray(data.tasks)) {
           state.tasks = data.tasks;
           saveDemo();
         }
-        if (data.feed) {
+        if (Array.isArray(data.feed)) {
           const nonSolved = state.tasks.filter(t => t.durum !== 'Çözüldü');
           state.tasks = [...nonSolved, ...data.feed];
           saveDemo();
@@ -580,7 +617,7 @@
     if (!bildiren || !konu) return;
 
     state.myName = bildiren;
-    localStorage.setItem('hallederiz_user_name', bildiren);
+    safeStorageSet('hallederiz_user_name', bildiren);
 
     const now = new Date();
     const tarih = now.toLocaleDateString('tr-TR') + ' ' + now.toTimeString().slice(0,5);
@@ -609,7 +646,8 @@
       showToast('Bildirim yüksekokul idaresine iletildi.');
       render();
     }
-    document.getElementById('fKonu').value = '';
+    const konuEl = document.getElementById('fKonu');
+    if (konuEl) konuEl.value = '';
   }
 
   async function updateTask(id, updates) {
@@ -645,7 +683,8 @@
   }
 
   function unlockStaff() {
-    const val = document.getElementById('staffPinInput').value.trim();
+    const inp = document.getElementById('staffPinInput');
+    const val = inp ? inp.value.trim() : '';
     if (val === STAFF_PIN_CODE) {
       state.staffUnlocked = true;
       showToast('Sorumlu Personel oturumu açıldı.');
@@ -664,7 +703,8 @@
   }
 
   function unlockAdmin() {
-    const val = document.getElementById('pinInput').value.trim();
+    const inp = document.getElementById('pinInput');
+    const val = inp ? inp.value.trim() : '';
     if (val === ADMIN_PIN_CODE) {
       state.adminUnlocked = true;
       state.adminPin = val;
@@ -694,10 +734,12 @@
   async function toggleGlobalFeed(checked) {
     state.publicFeedEnabled = checked;
     if (state.apiUrl) {
-      await fetch(state.apiUrl, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'toggle_feed', pin: state.adminPin, enabled: checked })
-      });
+      try {
+        await fetch(state.apiUrl, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'toggle_feed', pin: state.adminPin, enabled: checked })
+        });
+      } catch (_) {}
     }
     showToast(checked ? 'Tamamlanan işlerin özeti personele açıldı.' : 'Genel tamamlanan iş akışı kapatıldı.');
     render();
@@ -723,6 +765,7 @@
   function renderNav() {
     updateMasterBar();
     const nav = document.getElementById('bottomNav');
+    if (!nav) return;
 
     if (state.role === 'teacher' && !state.adminUnlocked) {
       nav.classList.add('hidden');
@@ -758,6 +801,7 @@
     updateConnBadge();
     renderNav();
     const main = document.getElementById('appMain');
+    if (!main) return;
 
     if (state.role === 'welcome') {
       main.innerHTML = `
@@ -939,7 +983,7 @@
                 <div style="font-size:11px; color:var(--muted);">İdare izin verdiğinde sonuçlanan işleri listeler.</div>
               </div>
               <label class="switch">
-                <input type="checkbox" ${state.userShowPublicFeed ? 'checked' : ''} onchange="state.userShowPublicFeed=this.checked; localStorage.setItem('hallederiz_user_feed', this.checked); render();">
+                <input type="checkbox" ${state.userShowPublicFeed ? 'checked' : ''} onchange="state.userShowPublicFeed=this.checked; safeStorageSet('hallederiz_user_feed', this.checked); render();">
                 <span class="slider"></span>
               </label>
             </div>
@@ -1069,8 +1113,10 @@
     }
   }
 
-  updateConnBadge();
-  syncFromServer();
+  document.addEventListener('DOMContentLoaded', () => {
+    render();
+    syncFromServer();
+  });
 </script>
 </body>
 </html>
