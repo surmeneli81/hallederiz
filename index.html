@@ -358,6 +358,7 @@
 <script>
   const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzH2E3K16Ek1zjIKo33dXVcc6bEfO0DursTxqAPiIMWU3te5ArRFvXfUK57zDcAm0qX/exec";
   const ADMIN_PIN_CODE = "0571";
+  const STAFF_LIST = ["MURAT ŞAHİN", "AYŞEGÜL KINALI", "CENGİZHAN BELDÜZ", "İSMAİL KUMAŞ", "SELİM OSMANOĞLU", "MUHAMMET BEKİROĞLU", "HÜSEYİN KARADENİZ", "MEHMET SARI", "FİGEN ATASOY KARAKUŞ", "TÜRKAN ODABAŞI", "SONGÜL ÖKSÜZ", "ENVER"];
 
   function safeStorageGet(key, fallback) {
     try {
@@ -392,7 +393,7 @@
     userShowPublicFeed: Boolean(safeParseJson(safeStorageGet('hallederiz_user_feed', 'true'), true)),
     userNotifyAll: Boolean(safeParseJson(safeStorageGet('hallederiz_user_notify_all', 'false'), false)),
     myName: safeStorageGet('hallederiz_user_name', ''),
-    staffUnit: safeStorageGet('hallederiz_staff_unit', 'Bilgi İşlem Birimi'),
+    staffUnit: safeStorageGet('hallederiz_staff_unit', STAFF_LIST[0] || 'MURAT ŞAHİN'),
     tasks: Array.isArray(safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'), []))
       ? safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'), [])
       : []
@@ -713,7 +714,7 @@
   }
 
   function exportCSV() {
-    const headers = ['ID', 'Tarih', 'Bildiren', 'Mekan', 'Tur', 'Aciliyet', 'Konu', 'Durum', 'Atanan_Birim', 'Cozum_Notu', 'Sure_Saat'];
+    const headers = ['ID', 'Tarih', 'Bildiren', 'Mekan', 'Tur', 'Aciliyet', 'Konu', 'Durum', 'Atanan_Personel', 'Cozum_Notu', 'Sure_Saat'];
     const rows = state.tasks.map(t => [
       t.id, t.tarih, t.bildiren, t.mekan, t.tur, t.aciliyet,
       `"${(t.konu || '').replace(/"/g, '""')}"`,
@@ -885,7 +886,7 @@
             ${activeTasks.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Şu an üzerinizde bekleyen aktif görev bulunmuyor.</p>' : activeTasks.map(t => `
               <div class="task-item">
                 <div class="task-top">
-                  <span class="task-meta">${t.id} • ${t.mekan} • Birim: ${t.atanan || 'Genel'}</span>
+                  <span class="task-meta">${t.id} • ${t.mekan} • Sorumlu: ${t.atanan || 'Genel'}</span>
                   ${statusBadge(t.durum)}
                 </div>
                 <div class="task-title">${t.konu}</div>
@@ -914,7 +915,7 @@
             ${activeTasks.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Şu an üzerinizde bekleyen aktif görev bulunmuyor.</p>' : activeTasks.map(t => `
               <div class="task-item">
                 <div class="task-top">
-                  <span class="task-meta">${t.id} • ${t.mekan} • Birim: ${t.atanan || 'Genel'}</span>
+                  <span class="task-meta">${t.id} • ${t.mekan} • Sorumlu: ${t.atanan || 'Genel'}</span>
                   ${statusBadge(t.durum)}
                 </div>
                 <div class="task-title">${t.konu}</div>
@@ -1003,12 +1004,20 @@
                 ${t.durum === 'Beklemede' ? `
                   <div style="display:flex; gap:8px; margin-top:8px;">
                     <select id="assign-${t.id}" style="padding:6px 8px; font-size:12px;">
-                      <option>Bilgi İşlem Birimi</option>
-                      <option>Teknik Servis</option>
-                      <option>Destek ve Temizlik</option>
-                      <option>İdari İşler</option>
+                      <option>MURAT ŞAHİN</option>
+                      <option>AYŞEGÜL KINALI</option>
+                      <option>CENGİZHAN BELDÜZ</option>
+                      <option>İSMAİL KUMAŞ</option>
+                      <option>SELİM OSMANOĞLU</option>
+                      <option>MUHAMMET BEKİROĞLU</option>
+                      <option>HÜSEYİN KARADENİZ</option>
+                      <option>MEHMET SARI</option>
+                      <option>FİGEN ATASOY KARAKUŞ</option>
+                      <option>TÜRKAN ODABAŞI</option>
+                      <option>SONGÜL ÖKSÜZ</option>
+                      <option>ENVER</option>
                     </select>
-                    <button type="button" class="btn btn-primary btn-sm" onclick="updateTask('${t.id}', { durum: 'Atandı', atanan: document.getElementById('assign-${t.id}').value })">Personele Ata</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="updateTask('${t.id}', { durum: 'Atandı', atanan: document.getElementById('assign-${t.id}').value })">Personel Ata</button>
                   </div>
                 ` : ''}
                 ${t.durum === 'Onay Bekliyor' ? `
@@ -1029,12 +1038,11 @@
         const solvedList = state.tasks.filter(t => t.durum === 'Çözüldü');
         const avgHours = solvedList.length ? (solvedList.reduce((a, b) => a + (Number(b.sureSaat) || 0), 0) / solvedList.length).toFixed(1) : '0.0';
 
-        const units = ['Bilgi İşlem Birimi', 'Teknik Servis', 'Destek ve Temizlik', 'İdari İşler'];
-        const unitStats = units.map(u => {
-          const allU = state.tasks.filter(t => t.atanan === u);
-          const solU = allU.filter(t => t.durum === 'Çözüldü');
-          const avgU = solU.length ? (solU.reduce((a, b) => a + (Number(b.sureSaat) || 0), 0) / solU.length).toFixed(1) + ' sa' : '-';
-          return { unit: u, assigned: allU.length, solved: solU.length, avg: avgU };
+        const staffStats = STAFF_LIST.map(p => {
+          const allP = state.tasks.filter(t => t.atanan === p);
+          const solP = allP.filter(t => t.durum === 'Çözüldü');
+          const avgP = solP.length ? (solP.reduce((a, b) => a + (Number(b.sureSaat) || 0), 0) / solP.length).toFixed(1) + ' sa' : '-';
+          return { person: p, assigned: allP.length, solved: solP.length, avg: avgP };
         });
 
         main.innerHTML = `
@@ -1050,12 +1058,12 @@
             </div>
             <table>
               <thead>
-                <tr><th>Sorumlu Birim</th><th>Atanan</th><th>Çözülen</th><th>Ort. Süre</th></tr>
+                <tr><th>Sorumlu Personel</th><th>Atanan</th><th>Çözülen</th><th>Ort. Süre</th></tr>
               </thead>
               <tbody>
-                ${unitStats.map(s => `
+                ${staffStats.map(s => `
                   <tr>
-                    <td><strong>${s.unit}</strong></td>
+                    <td><strong>${s.person}</strong></td>
                     <td>${s.assigned}</td>
                     <td>${s.solved}</td>
                     <td>${s.avg}</td>
