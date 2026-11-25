@@ -313,24 +313,24 @@
         <div class="brand-sub">Sürmene Abdullah Kanca Meslek Yüksekokulu</div>
       </div>
     </div>
-    <div class="status-pill locked" id="statusPill" onclick="handleStatusPillClick()" aria-disabled="true">
+    <button type="button" class="status-pill locked" id="statusPill" onclick="handleStatusPillClick()" aria-disabled="true">
       <span class="dot-ind live" id="connDot"></span>
       <span id="connText">Canlı E-Tablo</span>
-    </div>
+    </button>
   </div>
 
   <div class="role-bar">
-    <button class="role-btn" id="role-teacher" onclick="switchRole('teacher')">Talep Eden Personel</button>
-    <button class="role-btn" id="role-staff" onclick="switchRole('staff')">Sorumlu Personel</button>
-    <button class="role-btn" id="role-admin" onclick="switchRole('admin')">İdare</button>
+    <button type="button" class="role-btn" id="role-teacher" onclick="switchRole('teacher')">Talep Eden Personel</button>
+    <button type="button" class="role-btn" id="role-staff" onclick="switchRole('staff')">Sorumlu Personel</button>
+    <button type="button" class="role-btn" id="role-admin" onclick="switchRole('admin')">İdare</button>
   </div>
 
   <div class="master-bar" id="masterBar">
     <span class="master-label">🔓 İdari Tam Yetki Aktif</span>
     <div class="master-tabs">
-      <button class="master-tab-btn" id="mbtn-teacher" onclick="switchRole('teacher')">Talep Eden Personel</button>
-      <button class="master-tab-btn" id="mbtn-staff" onclick="switchRole('staff')">Sorumlu Personel</button>
-      <button class="master-tab-btn" id="mbtn-admin" onclick="switchRole('admin')">İdare</button>
+      <button type="button" class="master-tab-btn" id="mbtn-teacher" onclick="switchRole('teacher')">Talep Eden Personel</button>
+      <button type="button" class="master-tab-btn" id="mbtn-staff" onclick="switchRole('staff')">Sorumlu Personel</button>
+      <button type="button" class="master-tab-btn" id="mbtn-admin" onclick="switchRole('admin')">İdare</button>
     </div>
   </div>
 </header>
@@ -346,7 +346,7 @@
   <div class="modal">
     <div class="card-title">
       <span>🔗 Ortak Veritabanı Bağlantısı</span>
-      <button class="btn btn-outline btn-sm" onclick="closeApiModal()">✕</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="closeApiModal()">✕</button>
     </div>
     <p style="font-size:12px; color:var(--muted); margin-bottom:12px; line-height:1.5;">
       İdari yetki ile canlı e-tablo erişimi açıldı. Google Apps Script <strong>/exec</strong> bağlantı URL'sini görüntüleyebilir veya güncelleyebilirsiniz.
@@ -356,8 +356,8 @@
       <input type="url" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
     </div>
     <div style="display:flex; gap:8px;">
-      <button class="btn btn-primary" onclick="saveApiUrl()">Kaydet & Bağlan</button>
-      <button class="btn btn-outline" onclick="resetDefaultApiUrl()">Varsayılana Dön</button>
+      <button type="button" class="btn btn-primary" onclick="saveApiUrl()">Kaydet & Bağlan</button>
+      <button type="button" class="btn btn-outline" onclick="resetDefaultApiUrl()">Varsayılana Dön</button>
     </div>
   </div>
 </div>
@@ -570,18 +570,6 @@
     return html;
   }
 
-  function renderStepper(durum) {
-    const stages = ['Beklemede', 'Atandı', 'İşlemde', 'Çözüldü'];
-    let idx = stages.indexOf(durum);
-    if (durum === 'Onay Bekliyor') idx = 2;
-    return `
-      <div class="stepper">
-        ${stages.map((_, i) => `<div class="step-bar ${i < idx ? 'done' : (i === idx ? 'curr' : '')}"></div>`).join('')}
-      </div>
-      <div class="step-labels"><span>Bildirildi</span><span>Atandı</span><span>İşlemde</span><span>Çözüldü</span></div>
-    `;
-  }
-
   async function submitNewTask(e) {
     e.preventDefault();
     const mekan = document.getElementById('fMekan').value;
@@ -724,8 +712,7 @@
       `"${(t.cozum || '').replace(/"/g, '""')}"`,
       t.sureSaat || ''
     ].join(';'));
-    const csv = '﻿' + [headers.join(';'), ...rows].join('
-');
+    const csv = '\uFEFF' + [headers.join(';'), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -746,9 +733,9 @@
     if (state.role === 'staff' && (state.staffUnlocked || state.adminUnlocked)) {
       nav.classList.remove('hidden');
       nav.innerHTML = `
-        <button class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')"><span class="nav-icon">🔧</span>Görevlerim</button>
-        <button class="nav-item ${state.tab==='list'?'active':''}" onclick="switchTab('list')"><span class="nav-icon">✅</span>Tamamlananlar</button>
-        <button class="nav-item ${state.tab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span>Ayarlar</button>
+        <button type="button" class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')"><span class="nav-icon">🔧</span>Görevlerim</button>
+        <button type="button" class="nav-item ${state.tab==='list'?'active':''}" onclick="switchTab('list')"><span class="nav-icon">✅</span>Tamamlananlar</button>
+        <button type="button" class="nav-item ${state.tab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span>Ayarlar</button>
       `;
       return;
     }
@@ -756,9 +743,9 @@
     if (state.role === 'admin' && state.adminUnlocked) {
       nav.classList.remove('hidden');
       nav.innerHTML = `
-        <button class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')"><span class="nav-icon">📥</span>İş Yönetimi</button>
-        <button class="nav-item ${state.tab==='stats'?'active':''}" onclick="switchTab('stats')"><span class="nav-icon">📊</span>İstatistikler</button>
-        <button class="nav-item ${state.tab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="nav-icon">🛡️</span>Yetki & Ayar</button>
+        <button type="button" class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')"><span class="nav-icon">📥</span>İş Yönetimi</button>
+        <button type="button" class="nav-item ${state.tab==='stats'?'active':''}" onclick="switchTab('stats')"><span class="nav-icon">📊</span>İstatistikler</button>
+        <button type="button" class="nav-item ${state.tab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="nav-icon">🛡️</span>Yetki & Ayar</button>
       `;
       return;
     }
@@ -780,9 +767,9 @@
             Devam etmek için rol butonlarından birini seçiniz.
           </p>
           <div style="display:grid; gap:10px;">
-            <button class="btn btn-primary" onclick="switchRole('teacher')">Talep Eden Personel</button>
-            <button class="btn btn-cyan" onclick="switchRole('staff')">Sorumlu Personel</button>
-            <button class="btn btn-outline" onclick="switchRole('admin')">İdare</button>
+            <button type="button" class="btn btn-primary" onclick="switchRole('teacher')">Talep Eden Personel</button>
+            <button type="button" class="btn btn-cyan" onclick="switchRole('staff')">Sorumlu Personel</button>
+            <button type="button" class="btn btn-outline" onclick="switchRole('admin')">İdare</button>
           </div>
         </div>
       `;
@@ -894,7 +881,7 @@
             <div class="form-group">
               <input type="password" id="staffPinInput" maxlength="6" placeholder="xxxx" style="text-align:center; font-size:18px; letter-spacing:4px;">
             </div>
-            <button class="btn btn-primary" onclick="unlockStaff()">Giriş Yap</button>
+            <button type="button" class="btn btn-primary" onclick="unlockStaff()">Giriş Yap</button>
           </div>
         `;
         return;
@@ -913,12 +900,12 @@
                 </div>
                 <div class="task-title">${t.konu}</div>
                 ${t.durum === 'Atandı' ? `
-                  <button class="btn btn-cyan btn-sm" onclick="updateTask('${t.id}', { durum: 'İşlemde' })">▶ İşleme Al</button>
+                  <button type="button" class="btn btn-cyan btn-sm" onclick="updateTask('${t.id}', { durum: 'İşlemde' })">▶ İşleme Al</button>
                 ` : ''}
                 ${t.durum === 'İşlemde' ? `
                   <div style="margin-top:8px;">
                     <input type="text" id="sol-${t.id}" placeholder="Yapılan işlemi kısaca yazın..." style="margin-bottom:8px;">
-                    <button class="btn btn-green btn-sm" onclick="const v=document.getElementById('sol-${t.id}').value.trim(); if(!v){showToast('Çözüm açıklaması giriniz.');return;} updateTask('${t.id}', { durum: 'Onay Bekliyor', cozum: v })">✓ Tamamlandı Olarak Gönder</button>
+                    <button type="button" class="btn btn-green btn-sm" onclick="const v=document.getElementById('sol-${t.id}').value.trim(); if(!v){showToast('Çözüm açıklaması giriniz.');return;} updateTask('${t.id}', { durum: 'Onay Bekliyor', cozum: v })">✓ Tamamlandı Olarak Gönder</button>
                   </div>
                 ` : ''}
                 ${t.durum === 'Onay Bekliyor' ? `<div style="font-size:12px; color:#9a3412;"><strong>Girilen Çözüm:</strong> ${t.cozum} (İdare onayı bekleniyor)</div>` : ''}
@@ -957,7 +944,7 @@
               </label>
             </div>
             <div style="margin-top:14px;">
-              <button class="btn btn-outline" onclick="lockAllPrivileged()">🔒 Oturumu Kilitle</button>
+              <button type="button" class="btn btn-outline" onclick="lockAllPrivileged()">🔒 Oturumu Kilitle</button>
             </div>
           </div>
         `;
@@ -974,7 +961,7 @@
             <div class="form-group">
               <input type="password" id="pinInput" maxlength="6" placeholder="xxxx" style="text-align:center; font-size:18px; letter-spacing:4px;">
             </div>
-            <button class="btn btn-primary" onclick="unlockAdmin()">Giriş Yap</button>
+            <button type="button" class="btn btn-primary" onclick="unlockAdmin()">Giriş Yap</button>
           </div>
         `;
         return;
@@ -985,7 +972,7 @@
           <div class="card">
             <div class="card-title">
               <span>Gelen Talepler ve Süreç Yönetimi (${state.tasks.length})</span>
-              <button class="btn btn-outline btn-sm" onclick="syncFromServer()">↻ Yenile</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="syncFromServer()">↻ Yenile</button>
             </div>
             ${state.tasks.map(t => `
               <div class="task-item">
@@ -1002,14 +989,14 @@
                       <option>Destek ve Temizlik</option>
                       <option>İdari İşler</option>
                     </select>
-                    <button class="btn btn-primary btn-sm" onclick="updateTask('${t.id}', { durum: 'Atandı', atanan: document.getElementById('assign-${t.id}').value })">Personele Ata</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="updateTask('${t.id}', { durum: 'Atandı', atanan: document.getElementById('assign-${t.id}').value })">Personele Ata</button>
                   </div>
                 ` : ''}
                 ${t.durum === 'Onay Bekliyor' ? `
                   <div style="background:#fff7ed; padding:8px; border-radius:8px; font-size:12px; margin-top:6px;">
                     <strong>Personel Çözümü (${t.atanan}):</strong> ${t.cozum}
                     <div style="margin-top:8px;">
-                      <button class="btn btn-green btn-sm" onclick="updateTask('${t.id}', { durum: 'Çözüldü' })">✓ Onayla & Öğretmene Bildir</button>
+                      <button type="button" class="btn btn-green btn-sm" onclick="updateTask('${t.id}', { durum: 'Çözüldü' })">✓ Onayla & Öğretmene Bildir</button>
                     </div>
                   </div>
                 ` : ''}
@@ -1035,7 +1022,7 @@
           <div class="card">
             <div class="card-title">
               <span>Yetkili İstatistik Paneli</span>
-              <button class="btn btn-cyan btn-sm" onclick="exportCSV()">📥 Excel / CSV İndir</button>
+              <button type="button" class="btn btn-cyan btn-sm" onclick="exportCSV()">📥 Excel / CSV İndir</button>
             </div>
             <div class="kpi-grid">
               <div class="kpi-box"><div class="kpi-val">${total}</div><div class="kpi-lbl">Toplam İş</div></div>
@@ -1074,7 +1061,7 @@
               </label>
             </div>
             <div style="margin-top:14px;">
-              <button class="btn btn-outline" onclick="lockAllPrivileged()">🔒 İdare Oturumunu Kilitle</button>
+              <button type="button" class="btn btn-outline" onclick="lockAllPrivileged()">🔒 İdare Oturumunu Kilitle</button>
             </div>
           </div>
         `;
