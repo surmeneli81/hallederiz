@@ -53,15 +53,8 @@
     border: 1px solid rgba(255,255,255,0.2);
     user-select: none;
   }
-  .status-pill.locked {
-    cursor: default;
-    opacity: 0.92;
-  }
-  .status-pill.unlocked {
-    cursor: pointer;
-    background: rgba(16,185,129,0.22);
-    border-color: rgba(16,185,129,0.55);
-  }
+  .status-pill.locked { cursor: default; opacity: 0.92; }
+  .status-pill.unlocked { cursor: pointer; background: rgba(16,185,129,0.22); border-color: rgba(16,185,129,0.55); }
   .dot-ind { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
   .dot-ind.live { background: var(--green); }
 
@@ -89,7 +82,7 @@
   }
   .role-btn.active { background: #fff; color: var(--navy); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
 
-  /* Master Access Bar (when unlocked via admin password) */
+  /* Master Access Bar */
   .master-bar {
     display: none;
     max-width: 960px;
@@ -118,6 +111,47 @@
   }
   .master-tab-btn.active { background: var(--cyan); color: #fff; }
 
+  /* Blinking & Pulse Animations */
+  @keyframes blinkAlert {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.985); }
+  }
+  @keyframes pulseRing {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+    70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  }
+  .alert-blink-banner {
+    background: #fef2f2;
+    border: 1.5px solid #ef4444;
+    color: #991b1b;
+    border-radius: 12px;
+    padding: 11px 14px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    animation: blinkAlert 1.15s infinite, pulseRing 1.6s infinite;
+  }
+  .alert-badge-blink {
+    background: #ef4444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 999px;
+    animation: blinkAlert 1s infinite;
+    white-space: nowrap;
+  }
+  .task-item.urgent-blink {
+    border-color: #ef4444;
+    background: #fffafa;
+    animation: pulseRing 1.8s infinite;
+  }
+
   /* Main Container */
   main { max-width: 960px; margin: 0 auto; padding: 14px; }
 
@@ -130,7 +164,7 @@
     margin-bottom: 14px;
     box-shadow: 0 2px 8px rgba(15,23,42,0.04);
   }
-  .card-title { font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .card-title { font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
   
   .form-group { margin-bottom: 12px; }
   label { display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 5px; }
@@ -263,6 +297,7 @@
     gap: 3px;
     cursor: pointer;
     padding: 4px 10px;
+    position: relative;
   }
   .nav-item.active { color: var(--navy); }
   .nav-icon { font-size: 18px; }
@@ -279,6 +314,7 @@
     background: var(--dark-navy); color: #fff; padding: 10px 18px;
     border-radius: 24px; font-size: 13px; font-weight: 600;
     box-shadow: 0 8px 20px rgba(0,0,0,0.25); z-index: 120; display: none;
+    max-width: 92vw; text-align: center;
   }
 </style>
 </head>
@@ -387,4 +423,336 @@
 
   let state = {
     role: 'welcome',
-    tab
+    tab: 'home',
+    apiUrl: safeStorageGet('hallederiz_api_url', DEFAULT_API_URL) || DEFAULT_API_URL,
+    adminUnlocked: false,
+    adminPin: '',
+    staffUnlocked: false,
+    staffPin: '',
+    publicFeedEnabled: true,
+    userShowPublicFeed: Boolean(safeParseJson(safeStorageGet('hallederiz_user_feed', 'true'), true)),
+    browserNotifyEnabled: Boolean(safeParseJson(safeStorageGet('hallederiz_notify_enabled', 'true'), true)),
+    soundAlertEnabled: Boolean(safeParseJson(safeStorageGet('hallederiz_sound_enabled', 'true'), true)),
+    blinkAlertActive: false,
+    blinkAlertText: '',
+    myName: safeStorageGet('hallederiz_user_name', ''),
+    staffUnit: safeStorageGet('hallederiz_staff_unit', STAFF_LIST[0] || 'MURAT ŞAHİN'),
+    tasks: Array.isArray(safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'), []))
+      ? safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'), [])
+      : [],
+    isSyncing: false,
+    lastSyncSignature: '',
+    knownTaskIds: []
+  };
+
+  let autoSyncTimer = null;
+
+  function canAccessLiveSheet() {
+    return state.adminUnlocked === true && state.adminPin === ADMIN_PIN_CODE;
+  }
+
+  function canAccessStaffInterface() {
+    return canAccessLiveSheet() || (state.staffUnlocked === true && state.staffPin === STAFF_PIN_CODE);
+  }
+
+  function hasActiveInputFocus() {
+    const active = document.activeElement;
+    if (!active) return false;
+    const tag = active.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.style.display = 'block';
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => { t.style.display = 'none'; }, 2800);
+  }
+
+  function playAlertTone() {
+    if (!state.soundAlertEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.32);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.34);
+    } catch (_) {}
+  }
+
+  async function requestBrowserNotificationPermission() {
+    if (!('Notification' in window)) {
+      showToast('Bu tarayıcı masaüstü/telefon bildirimlerini desteklemiyor.');
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      state.browserNotifyEnabled = true;
+      safeStorageSet('hallederiz_notify_enabled', true);
+      showToast('Tarayıcı bildirimleri zaten açık.');
+      render();
+      return;
+    }
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        state.browserNotifyEnabled = true;
+        safeStorageSet('hallederiz_notify_enabled', true);
+        showToast('Tarayıcı bildirimleri etkinleştirildi.');
+        sendBrowserAlert('hallederiz v1.0', 'Bildirim izni verildi. Yeni talep ve atamalarda uyarı alacaksınız.');
+      } else {
+        showToast('Tarayıcı bildirim izni verilmedi.');
+      }
+    } catch (_) {
+      showToast('Bildirim izni alınırken bir hata oluştu.');
+    }
+    render();
+  }
+
+  function sendBrowserAlert(title, body) {
+    playAlertTone();
+    if (!state.browserNotifyEnabled) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') {
+      try {
+        new Notification(title, { body, tag: 'hallederiz-alert' });
+      } catch (_) {}
+    }
+  }
+
+  function triggerVisualAlert(message, title = 'hallederiz v1.0 Uyarı') {
+    state.blinkAlertActive = true;
+    state.blinkAlertText = message;
+    sendBrowserAlert(title, message);
+  }
+
+  function clearVisualAlert() {
+    state.blinkAlertActive = false;
+    state.blinkAlertText = '';
+    render();
+  }
+
+  function updateConnBadge() {
+    const pill = document.getElementById('statusPill');
+    const dot = document.getElementById('connDot');
+    const txt = document.getElementById('connText');
+
+    if (dot) dot.classList.add('live');
+    if (txt) txt.textContent = 'Canlı E-Tablo';
+
+    if (pill) {
+      if (canAccessLiveSheet()) {
+        pill.classList.remove('locked');
+        pill.classList.add('unlocked');
+        pill.setAttribute('aria-disabled', 'false');
+        pill.setAttribute('title', 'E-Tablo Bağlantı Ayarını Aç');
+      } else {
+        pill.classList.remove('unlocked');
+        pill.classList.add('locked');
+        pill.setAttribute('aria-disabled', 'true');
+        pill.removeAttribute('title');
+      }
+    }
+  }
+
+  function handleStatusPillClick() {
+    if (!canAccessLiveSheet()) return;
+    openApiModal();
+  }
+
+  function updateMasterBar() {
+    const bar = document.getElementById('masterBar');
+    if (!bar) return;
+    if (canAccessLiveSheet()) {
+      bar.classList.add('show');
+      ['teacher', 'staff', 'admin'].forEach(r => {
+        const btn = document.getElementById('mbtn-' + r);
+        if (btn) btn.classList.toggle('active', state.role === r);
+      });
+    } else {
+      bar.classList.remove('show');
+    }
+  }
+
+  function openApiModal() {
+    if (!canAccessLiveSheet()) return;
+    const inp = document.getElementById('apiUrlInput');
+    const modal = document.getElementById('apiModal');
+    if (inp) inp.value = state.apiUrl;
+    if (modal) modal.classList.add('show');
+  }
+  function closeApiModal() {
+    const modal = document.getElementById('apiModal');
+    if (modal) modal.classList.remove('show');
+  }
+  function saveApiUrl() {
+    if (!canAccessLiveSheet()) return;
+    const inp = document.getElementById('apiUrlInput');
+    const val = (inp ? inp.value.trim() : '') || DEFAULT_API_URL;
+    state.apiUrl = val;
+    state.lastSyncSignature = '';
+    safeStorageSet('hallederiz_api_url', val);
+    closeApiModal();
+    updateConnBadge();
+    showToast('Canlı veritabanı bağlantısı güncellendi.');
+    syncFromServer({ silent: false, forceRender: true });
+  }
+  function resetDefaultApiUrl() {
+    if (!canAccessLiveSheet()) return;
+    state.apiUrl = DEFAULT_API_URL;
+    state.lastSyncSignature = '';
+    safeStorageSet('hallederiz_api_url', DEFAULT_API_URL);
+    const inp = document.getElementById('apiUrlInput');
+    if (inp) inp.value = DEFAULT_API_URL;
+    closeApiModal();
+    updateConnBadge();
+    showToast('Varsayılan canlı bağlantıya dönüldü.');
+    syncFromServer({ silent: false, forceRender: true });
+  }
+
+  function saveDemo() {
+    safeStorageSet('hallederiz_demo_tasks', JSON.stringify(state.tasks));
+  }
+
+  async function syncFromServer(options = {}) {
+    const { silent = false, forceRender = false } = options;
+    updateConnBadge();
+
+    if (!canAccessLiveSheet() || !state.apiUrl) {
+      if (forceRender) render();
+      return;
+    }
+
+    if (state.isSyncing) return;
+    state.isSyncing = true;
+
+    try {
+      const url = `${state.apiUrl}?action=admin_all&pin=${encodeURIComponent(state.adminPin)}&_t=${Date.now()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+
+      if (data && data.status === 'ok') {
+        let mergedTasks = state.tasks;
+        if (data.publicFeedEnabled !== undefined) {
+          state.publicFeedEnabled = data.publicFeedEnabled;
+        }
+        if (Array.isArray(data.tasks)) {
+          mergedTasks = data.tasks;
+        } else if (Array.isArray(data.feed)) {
+          const nonSolved = state.tasks.filter(t => t.durum !== 'Çözüldü');
+          mergedTasks = [...nonSolved, ...data.feed];
+        }
+
+        const prevIds = new Set(state.knownTaskIds);
+        const newlyArrived = state.knownTaskIds.length > 0
+          ? mergedTasks.filter(t => t.id && !prevIds.has(t.id))
+          : [];
+
+        const nextSignature = JSON.stringify({
+          feedEnabled: state.publicFeedEnabled,
+          tasks: mergedTasks
+        });
+        const changed = nextSignature !== state.lastSyncSignature;
+
+        state.tasks = mergedTasks;
+        state.knownTaskIds = mergedTasks.map(t => t.id).filter(Boolean);
+        state.lastSyncSignature = nextSignature;
+        saveDemo();
+
+        if (newlyArrived.length > 0) {
+          const first = newlyArrived[0];
+          triggerVisualAlert(
+            `Yeni talep geldi: ${first.mekan} - ${first.konu}`,
+            'Yeni İş / Arıza Bildirimi'
+          );
+        }
+
+        if (forceRender || (changed && !hasActiveInputFocus())) {
+          render();
+        }
+      }
+    } catch (e) {
+      if (!silent) {
+        showToast('Canlı e-tablo senkronizasyon hatası, yerel kayıtlar gösteriliyor.');
+      }
+      if (forceRender) render();
+    } finally {
+      state.isSyncing = false;
+    }
+  }
+
+  function startAutoSync() {
+    stopAutoSync();
+    autoSyncTimer = setInterval(() => {
+      if (document.visibilityState === 'visible' && canAccessLiveSheet()) {
+        syncFromServer({ silent: true, forceRender: false });
+      }
+    }, AUTO_SYNC_INTERVAL_MS);
+  }
+
+  function stopAutoSync() {
+    if (autoSyncTimer) {
+      clearInterval(autoSyncTimer);
+      autoSyncTimer = null;
+    }
+  }
+
+  function switchRole(role) {
+    if (role !== 'admin' && !canAccessLiveSheet()) {
+      state.adminPin = '';
+      state.adminUnlocked = false;
+    }
+    if (role !== 'staff' && !canAccessLiveSheet()) {
+      state.staffPin = '';
+      state.staffUnlocked = false;
+    }
+    state.role = role;
+    state.tab = 'home';
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.getElementById('role-' + role);
+    if (activeBtn) activeBtn.classList.add('active');
+    updateMasterBar();
+    render();
+    if (canAccessLiveSheet()) {
+      syncFromServer({ silent: true, forceRender: true });
+    }
+  }
+
+  function switchTab(tab) {
+    state.tab = tab;
+    render();
+  }
+
+  function progressLabel(durum) {
+    if (durum === 'Çözüldü') return 'sonuçlandı';
+    if (durum === 'İşlemde' || durum === 'Onay Bekliyor') return 'İşleme alındı';
+    return 'iş sırası bekliyor';
+  }
+
+  function statusBadge(durum) {
+    const map = {
+      'Beklemede': 'b-beklemede',
+      'Atandı': 'b-atandi',
+      'İşlemde': 'b-islemde',
+      'Onay Bekliyor': 'b-onay',
+      'Çözüldü': 'b-cozuldu'
+    };
+    return `<span class="badge ${map[durum] || 'b-beklemede'}">${durum}</span>`;
+  }
+
+  function renderProgressCardItem(t) {
+    const label = progressLabel(t.durum);
+    const badgeClass = t.durum === 'Çözüldü'
+      ? 'b-cozuldu'
+      : ((t.durum === 'İşlemde' || t.durum === 'Onay Bekliyor') ? 'b-islemde' : 'b-
