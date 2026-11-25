@@ -92,7 +92,7 @@
     margin-bottom: 14px;
     box-shadow: 0 2px 8px rgba(15,23,42,0.04);
   }
-  .card-title { font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   
   .form-group { margin-bottom: 12px; }
   label { display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 5px; }
@@ -140,6 +140,7 @@
     margin-bottom: 10px;
     background: #fff;
   }
+  .task-item:last-child { margin-bottom: 0; }
   .task-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
   .task-meta { font-size: 11px; color: var(--muted); font-weight: 600; }
   .task-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.4; }
@@ -155,6 +156,30 @@
   .b-islemde { background: #ede9fe; color: #5b21b6; }
   .b-onay { background: #ffedd5; color: #9a3412; }
   .b-cozuldu { background: #d1fae5; color: #065f46; }
+
+  /* Dropdown for extra items */
+  details.more-drawer {
+    margin-top: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #f8fafc;
+    overflow: hidden;
+  }
+  details.more-drawer > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+  }
+  details.more-drawer > summary::-webkit-details-marker { display: none; }
+  details.more-drawer[open] > summary { border-bottom: 1px solid var(--border); background: #eff6ff; }
+  .more-drawer-body { padding: 10px; background: #fff; }
 
   /* Stepper */
   .stepper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px; }
@@ -194,6 +219,7 @@
     padding: 8px 4px;
     z-index: 50;
   }
+  .bottom-nav.hidden { display: none; }
   .nav-item {
     border: none;
     background: transparent;
@@ -256,9 +282,9 @@
   </div>
 
   <div class="role-bar">
-    <button class="role-btn active" id="role-teacher" onclick="switchRole('teacher')">👨‍🏫 Talep Eden Personel</button>
-    <button class="role-btn" id="role-staff" onclick="switchRole('staff')">🔧 Sorumlu Personel</button>
-    <button class="role-btn" id="role-admin" onclick="switchRole('admin')">🏛️ İdare</button>
+    <button class="role-btn" id="role-teacher" onclick="switchRole('teacher')">Talep Eden Personel</button>
+    <button class="role-btn" id="role-staff" onclick="switchRole('staff')">Sorumlu Personel</button>
+    <button class="role-btn" id="role-admin" onclick="switchRole('admin')">İdare</button>
   </div>
 </header>
 
@@ -266,7 +292,7 @@
 
 <main id="appMain"></main>
 
-<nav class="bottom-nav" id="bottomNav"></nav>
+<nav class="bottom-nav hidden" id="bottomNav"></nav>
 
 <!-- API Bağlantı Modalı -->
 <div class="modal-backdrop" id="apiModal">
@@ -294,7 +320,7 @@
   const ADMIN_PIN_CODE = "0571";
 
   let state = {
-    role: 'teacher',
+    role: 'welcome',
     tab: 'home',
     apiUrl: localStorage.getItem('hallederiz_api_url') || DEFAULT_API_URL,
     adminUnlocked: false,
@@ -355,6 +381,7 @@
   }
 
   async function syncFromServer() {
+    if (state.role === 'welcome') { render(); return; }
     if (!state.apiUrl) { render(); return; }
     try {
       let action = 'public_feed';
@@ -385,16 +412,27 @@
   }
 
   function switchRole(role) {
+    if (role !== 'admin') {
+      state.adminUnlocked = false;
+      state.adminPin = '';
+    }
     state.role = role;
     state.tab = 'home';
     document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('role-' + role).classList.add('active');
+    const activeBtn = document.getElementById('role-' + role);
+    if (activeBtn) activeBtn.classList.add('active');
     syncFromServer();
   }
 
   function switchTab(tab) {
     state.tab = tab;
     render();
+  }
+
+  function progressLabel(durum) {
+    if (durum === 'Çözüldü') return 'sonuçlandı';
+    if (durum === 'İşlemde' || durum === 'Onay Bekliyor') return 'İşleme alındı';
+    return 'iş sırası bekliyor';
   }
 
   function statusBadge(durum) {
@@ -406,6 +444,47 @@
       'Çözüldü': 'b-cozuldu'
     };
     return `<span class="badge ${map[durum] || 'b-beklemede'}">${durum}</span>`;
+  }
+
+  function renderProgressCardItem(t) {
+    const label = progressLabel(t.durum);
+    const badgeClass = t.durum === 'Çözüldü'
+      ? 'b-cozuldu'
+      : ((t.durum === 'İşlemde' || t.durum === 'Onay Bekliyor') ? 'b-islemde' : 'b-beklemede');
+
+    return `
+      <div class="task-item">
+        <div class="task-top">
+          <span class="task-meta">${t.id} • ${t.mekan}${t.tarih ? ' • ' + t.tarih : ''}</span>
+          <span class="badge ${badgeClass}">${label}</span>
+        </div>
+        <div class="task-title">${t.konu}</div>
+        ${t.durum === 'Çözüldü' && t.cozum ? `<div style="font-size:12px; color:#065f46; background:#ecfdf5; padding:8px; border-radius:8px; margin-top:6px;"><strong>Onaylanan Sonuç:</strong> ${t.cozum}</div>` : ''}
+      </div>
+    `;
+  }
+
+  function renderCappedList(items, emptyText, moreLabelPrefix) {
+    if (!items.length) {
+      return `<p style="font-size:13px; color:var(--muted);">${emptyText}</p>`;
+    }
+    const topThree = items.slice(0, 3);
+    const rest = items.slice(3);
+    let html = topThree.map(renderProgressCardItem).join('');
+    if (rest.length > 0) {
+      html += `
+        <details class="more-drawer">
+          <summary>
+            <span>${moreLabelPrefix} (${rest.length} işlem daha)</span>
+            <span>▼</span>
+          </summary>
+          <div class="more-drawer-body">
+            ${rest.map(renderProgressCardItem).join('')}
+          </div>
+        </details>
+      `;
+    }
+    return html;
   }
 
   function renderStepper(durum) {
@@ -499,7 +578,7 @@
     if (val === ADMIN_PIN_CODE) {
       state.adminUnlocked = true;
       state.adminPin = val;
-      showToast('Yetkili oturumu açıldı.');
+      showToast('Yetkili oturumu açıldı. Tüm menüler aktif.');
       syncFromServer();
     } else {
       showToast('Hatalı PIN kodu!');
@@ -538,24 +617,33 @@
   function renderNav() {
     const nav = document.getElementById('bottomNav');
     if (state.role === 'teacher') {
-      nav.innerHTML = `
-        <button class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')"><span class="nav-icon">➕</span>Bildir</button>
-        <button class="nav-item ${state.tab==='list'?'active':''}" onclick="switchTab('list')"><span class="nav-icon">📋</span>Bildirimler</button>
-        <button class="nav-item ${state.tab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span>Ayarlar</button>
-      `;
-    } else if (state.role === 'staff') {
+      nav.classList.add('hidden');
+      nav.innerHTML = '';
+      return;
+    }
+
+    if (state.role === 'staff') {
+      nav.classList.remove('hidden');
       nav.innerHTML = `
         <button class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')"><span class="nav-icon">🔧</span>Görevlerim</button>
         <button class="nav-item ${state.tab==='list'?'active':''}" onclick="switchTab('list')"><span class="nav-icon">✅</span>Tamamlananlar</button>
         <button class="nav-item ${state.tab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span>Ayarlar</button>
       `;
-    } else {
+      return;
+    }
+
+    if (state.role === 'admin' && state.adminUnlocked) {
+      nav.classList.remove('hidden');
       nav.innerHTML = `
         <button class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')"><span class="nav-icon">📥</span>İş Yönetimi</button>
         <button class="nav-item ${state.tab==='stats'?'active':''}" onclick="switchTab('stats')"><span class="nav-icon">📊</span>İstatistikler</button>
         <button class="nav-item ${state.tab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="nav-icon">🛡️</span>Yetki & Ayar</button>
       `;
+      return;
     }
+
+    nav.classList.add('hidden');
+    nav.innerHTML = '';
   }
 
   function render() {
@@ -563,21 +651,39 @@
     const main = document.getElementById('appMain');
     const notifyChecked = !state.userNotifyAll ? 'checked' : '';
 
+    if (state.role === 'welcome') {
+      main.innerHTML = `
+        <div class="card" style="max-width:520px; margin:24px auto; text-align:center;">
+          <div class="card-title" style="justify-content:center;">Rol Seçimi Yapınız</div>
+          <p style="font-size:13px; color:var(--muted); margin-bottom:16px; line-height:1.5;">
+            Devam etmek için yukarıdaki veya aşağıdaki rol butonlarından birini seçiniz.
+          </p>
+          <div style="display:grid; gap:10px;">
+            <button class="btn btn-primary" onclick="switchRole('teacher')">Talep Eden Personel</button>
+            <button class="btn btn-cyan" onclick="switchRole('staff')">Sorumlu Personel</button>
+            <button class="btn btn-outline" onclick="switchRole('admin')">İdare</button>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
     if (state.role === 'teacher') {
-      if (state.tab === 'home') {
-        main.innerHTML = `
-          <div class="card">
-            <div class="card-title">Yeni İş / Arıza Bildirimi</div>
-            <form onsubmit="submitNewTask(event)">
+      const progressItems = state.tasks.filter(t => t.durum === 'Çözüldü' || !state.myName || t.bildiren === state.myName);
+
+      main.innerHTML = `
+        <div class="card">
+          <div class="card-title">Yeni İş / Arıza Bildirimi</div>
+          <form onsubmit="submitNewTask(event)">
+            <div class="form-group">
+              <label>Bildirimde Bulunan Personel</label>
+              <input type="text" id="fBildiren" value="${state.myName}" placeholder="Ad Soyad / Unvan yazınız..." required>
+            </div>
+            <div class="row-2">
               <div class="form-group">
-                <label>Bildirimde Bulunan Personel</label>
-                <input type="text" id="fBildiren" value="${state.myName}" placeholder="Ad Soyad / Unvan yazınız..." required>
-              </div>
-              <div class="row-2">
-                <div class="form-group">
-                  <label>Mekan / Birim</label>
-                  <select id="fMekan">
-                    <option>D101</option>
+                <label>Mekan / Birim</label>
+                <select id="fMekan">
+                  <option>D101</option>
                     <option>D102</option>
                     <option>D103</option>
                     <option>D104</option>
@@ -620,98 +726,41 @@
                     <option>Öğrenci Klüp2</option>
                     <option>Öğrenci İşleri</option>
                     <option>Diğer</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Bildirim Türü</label>
-                  <select id="fTur">
-                    <option>Arıza</option>
-                    <option>İstek</option>
-                    <option>Şikayet</option>
-                    <option>Planlı Bakım Önerisi</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Öncelik Durumu</label>
-                <select id="fAciliyet">
-                  <option value="Normal">Normal (Ders akışını engellemiyor)</option>
-                  <option value="Acil">Acil (Ders / Uygulama aksıyor)</option>
                 </select>
               </div>
               <div class="form-group">
-                <label>Sorun veya İstek Açıklaması</label>
-                <textarea id="fKonu" placeholder="Örn: D101 projeksiyon cihazı açılmıyor..." required></textarea>
+                <label>Bildirim Türü</label>
+                <select id="fTur">
+                  <option>Arıza</option>
+                  <option>İstek</option>
+                  <option>Şikayet</option>
+                  <option>Planlı Bakım Önerisi</option>
+                </select>
               </div>
-              <button type="submit" class="btn btn-primary">İdareye Bildir</button>
-            </form>
-          </div>
-        `;
-      } else if (state.tab === 'list') {
-        const myTasks = state.myName ? state.tasks.filter(t => t.bildiren === state.myName) : state.tasks;
-        const solvedPublic = (state.publicFeedEnabled && state.userShowPublicFeed)
-          ? state.tasks.filter(t => t.durum === 'Çözüldü' && t.bildiren !== state.myName)
-          : [];
+            </div>
+            <div class="form-group">
+              <label>Öncelik Durumu</label>
+              <select id="fAciliyet">
+                <option value="Normal">Normal (Ders akışını engellemiyor)</option>
+                <option value="Acil">Acil (Ders / Uygulama aksıyor)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Sorun veya İstek Açıklaması</label>
+              <textarea id="fKonu" placeholder="Örn: D101 projeksiyon cihazı açılmıyor..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">İdareye Bildir</button>
+          </form>
+        </div>
 
-        main.innerHTML = `
-          <div class="card">
-            <div class="card-title">${state.myName ? 'Kendi Bildirimlerim' : 'Son Bildirimler'} (${myTasks.length})</div>
-            ${myTasks.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Henüz açtığınız bir bildirim bulunmuyor.</p>' : myTasks.map(t => `
-              <div class="task-item">
-                <div class="task-top">
-                  <span class="task-meta">${t.id} • ${t.mekan} • ${t.tarih || ''}</span>
-                  ${statusBadge(t.durum)}
-                </div>
-                <div class="task-title">${t.konu}</div>
-                ${t.cozum ? `<div style="font-size:12px; color:#065f46; background:#ecfdf5; padding:8px; border-radius:8px; margin-top:6px;"><strong>Sonuç:</strong> ${t.cozum}</div>` : ''}
-                ${renderStepper(t.durum)}
-              </div>
-            `).join('')}
+        <div class="card">
+          <div class="card-title">
+            <span>Taleplerin İlerleme Süreci</span>
+            <span style="font-size:11px; color:var(--muted); font-weight:600;">Son ${Math.min(progressItems.length, 3)} / ${progressItems.length}</span>
           </div>
-
-          ${(state.publicFeedEnabled && state.userShowPublicFeed) ? `
-            <div class="card">
-              <div class="card-title">Yüksekokulda Tamamlanan İşler (Konu & Sonuç)</div>
-              ${solvedPublic.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Görüntülenecek tamamlanmış iş kaydı yok.</p>' : solvedPublic.map(t => `
-                <div class="task-item">
-                  <div class="task-top">
-                    <span class="task-meta">${t.mekan}</span>
-                    ${statusBadge('Çözüldü')}
-                  </div>
-                  <div class="task-title">${t.konu}</div>
-                  <div style="font-size:12px; color:#334155;"><strong>Çözüm:</strong> ${t.cozum || 'Tamamlandı.'}</div>
-                </div>
-              `).join('')}
-            </div>
-          ` : ''}
-        `;
-      } else {
-        main.innerHTML = `
-          <div class="card">
-            <div class="card-title">Kişisel Bildirim ve Akış Tercihleri</div>
-            <div class="switch-row">
-              <div>
-                <div style="font-size:13px; font-weight:700;">Tamamlanan Genel İşleri Göster</div>
-                <div style="font-size:11px; color:var(--muted);">İdare izin verdiğinde çözülen işlerin konu ve sonucunu listeler.</div>
-              </div>
-              <label class="switch">
-                <input type="checkbox" ${state.userShowPublicFeed ? 'checked' : ''} onchange="state.userShowPublicFeed=this.checked; localStorage.setItem('hallederiz_user_feed', this.checked); render();">
-                <span class="slider"></span>
-              </label>
-            </div>
-            <div class="switch-row">
-              <div>
-                <div style="font-size:13px; font-weight:700;">Sadece Kendi İşlerimde Bildirim Al</div>
-                <div style="font-size:11px; color:var(--muted);">Gereksiz bildirimleri önlemek için yalnızca kendi taleplerinizde uyarır.</div>
-              </div>
-              <label class="switch">
-                <input type="checkbox" ${notifyChecked} onchange="state.userNotifyAll=!this.checked; localStorage.setItem('hallederiz_user_notify_all', !this.checked); render();">
-                <span class="slider"></span>
-              </label>
-            </div>
-          </div>
-        `;
-      }
+          ${renderCappedList(progressItems, 'Henüz takip edilen bir talep bulunmuyor.', 'Tüm İşlemleri Göster')}
+        </div>
+      `;
     }
 
     else if (state.role === 'staff') {
@@ -782,7 +831,7 @@
           <div class="card" style="max-width:400px; margin:24px auto; text-align:center;">
             <div style="font-size:32px; margin-bottom:8px;">🔐</div>
             <div class="card-title" style="justify-content:center;">Yüksekokul İdaresi Girişi</div>
-            <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">İş atama, onay ve istatistik verilerine erişmek için yetkili PIN kodunu giriniz.</p>
+            <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">Şifre doğrulandıktan sonra tüm yönetim menüleri açılır.</p>
             <div class="form-group">
               <input type="password" id="pinInput" maxlength="6" placeholder="xxxx" style="text-align:center; font-size:18px; letter-spacing:4px;">
             </div>
