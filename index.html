@@ -387,15 +387,4 @@
 
   let state = {
     role: 'welcome',
-    tab: 'home',
-    apiUrl: safeStorageGet('hallederiz_api_url', DEFAULT_API_URL) || DEFAULT_API_URL,
-    adminUnlocked: false,
-    adminPin: '',
-    staffUnlocked: false,
-    staffPin: '',
-    publicFeedEnabled: true,
-    userShowPublicFeed: Boolean(safeParseJson(safeStorageGet('hallederiz_user_feed', 'true'), true)),
-    userNotifyAll: Boolean(safeParseJson(safeStorageGet('hallederiz_user_notify_all', 'false'), false)),
-    myName: safeStorageGet('hallederiz_user_name', ''),
-    staffUnit: safeStorageGet('hallederiz_staff_unit', STAFF_LIST[0] || 'MURAT ŞAHİN'),
-    tasks: Array.isArray(safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'),
+    tab
