@@ -25,7 +25,6 @@
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
   body { background: var(--bg); color: var(--text); padding-bottom: 84px; min-height: 100vh; }
 
-  /* Header */
   header {
     background: var(--navy);
     color: #fff;
@@ -40,7 +39,7 @@
   .logo-wrap { width: 38px; height: 38px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .brand-name { font-size: 17px; font-weight: 800; letter-spacing: 0.2px; line-height: 1.1; }
   .brand-sub { font-size: 11px; color: #bae6fd; margin-top: 2px; }
-  
+
   .status-pill {
     font-size: 11px;
     font-weight: 700;
@@ -59,7 +58,6 @@
   .dot-ind { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
   .dot-ind.live { background: var(--green); }
 
-  /* Role Switcher */
   .role-bar {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -83,7 +81,6 @@
   }
   .role-btn.active { background: #fff; color: var(--navy); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
 
-  /* Master Access Bar */
   .master-bar {
     display: none;
     max-width: 960px;
@@ -112,7 +109,6 @@
   }
   .master-tab-btn.active { background: var(--cyan); color: #fff; }
 
-  /* Blinking & Pulse Animations */
   @keyframes blinkAlert {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.35; transform: scale(0.985); }
@@ -153,10 +149,8 @@
     animation: pulseRing 1.8s infinite;
   }
 
-  /* Main Container */
   main { max-width: 960px; margin: 0 auto; padding: 14px; }
 
-  /* Cards & Forms */
   .card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -166,7 +160,7 @@
     box-shadow: 0 2px 8px rgba(15,23,42,0.04);
   }
   .card-title { font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-  
+
   .form-group { margin-bottom: 12px; }
   label { display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 5px; }
   input, select, textarea {
@@ -205,7 +199,6 @@
   .btn-outline { background: #fff; color: var(--navy); border: 1px solid var(--border); }
   .btn-sm { padding: 7px 11px; font-size: 12px; width: auto; }
 
-  /* Task Item */
   .task-item {
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -230,7 +223,6 @@
   .b-onay { background: #ffedd5; color: #9a3412; }
   .b-cozuldu { background: #d1fae5; color: #065f46; }
 
-  /* Dropdown for extra items */
   details.more-drawer {
     margin-top: 10px;
     border: 1px solid var(--border);
@@ -254,7 +246,6 @@
   details.more-drawer[open] > summary { border-bottom: 1px solid var(--border); background: #eff6ff; }
   .more-drawer-body { padding: 10px; background: #fff; }
 
-  /* Switch */
   .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
   .switch-row:last-child { border-bottom: none; }
   .switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
@@ -264,7 +255,6 @@
   input:checked + .slider { background: var(--navy); }
   input:checked + .slider:before { transform: translateX(20px); }
 
-  /* KPI Grid */
   .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
   .kpi-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; }
   .kpi-val { font-size: 20px; font-weight: 800; color: var(--navy); }
@@ -274,7 +264,6 @@
   th, td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border); }
   th { background: #f8fafc; color: var(--navy); font-weight: 700; }
 
-  /* Bottom Nav */
   .bottom-nav {
     position: fixed;
     bottom: 0; left: 0; right: 0;
@@ -303,7 +292,6 @@
   .nav-item.active { color: var(--navy); }
   .nav-icon { font-size: 18px; }
 
-  /* Modal & Toast */
   .modal-backdrop {
     position: fixed; inset: 0; background: rgba(15,23,42,0.6);
     display: none; align-items: center; justify-content: center; padding: 16px; z-index: 100;
@@ -371,7 +359,6 @@
 
 <nav class="bottom-nav hidden" id="bottomNav"></nav>
 
-<!-- API Bağlantı Modalı -->
 <div class="modal-backdrop" id="apiModal">
   <div class="modal">
     <div class="card-title">
@@ -625,6 +612,22 @@
     safeStorageSet('hallederiz_demo_tasks', JSON.stringify(state.tasks));
   }
 
+  function mergeTasksWithLocal(remoteTasks) {
+    const remoteList = Array.isArray(remoteTasks) ? remoteTasks : [];
+    const byId = new Map();
+    remoteList.forEach(item => {
+      if (item && item.id) {
+        byId.set(String(item.id), { ...item, durum: item.durum || 'Beklemede' });
+      }
+    });
+    state.tasks.forEach(localItem => {
+      if (localItem && localItem.id && !byId.has(String(localItem.id))) {
+        byId.set(String(localItem.id), { ...localItem, durum: localItem.durum || 'Beklemede' });
+      }
+    });
+    return Array.from(byId.values());
+  }
+
   async function syncFromServer(options = {}) {
     const { silent = false, forceRender = false } = options;
     updateConnBadge();
@@ -649,10 +652,9 @@
           state.publicFeedEnabled = data.publicFeedEnabled;
         }
         if (Array.isArray(data.tasks)) {
-          mergedTasks = data.tasks;
+          mergedTasks = mergeTasksWithLocal(data.tasks);
         } else if (Array.isArray(data.feed)) {
-          const nonSolved = state.tasks.filter(t => t.durum !== 'Çözüldü');
-          mergedTasks = [...nonSolved, ...data.feed];
+          mergedTasks = mergeTasksWithLocal(data.feed);
         }
 
         const prevIds = new Set(state.knownTaskIds);
@@ -682,10 +684,12 @@
         if (forceRender || (changed && !hasActiveInputFocus())) {
           render();
         }
+      } else if (forceRender) {
+        render();
       }
     } catch (e) {
       if (!silent) {
-        showToast('Canlı e-tablo senkronizasyon hatası, yerel kayıtlar gösteriliyor.');
+        showToast('Canlı e-tablo senkronizasyon hatası, mevcut kayıtlar gösteriliyor.');
       }
       if (forceRender) render();
     } finally {
@@ -742,6 +746,7 @@
   }
 
   function statusBadge(durum) {
+    const d = durum || 'Beklemede';
     const map = {
       'Beklemede': 'b-beklemede',
       'Atandı': 'b-atandi',
@@ -749,7 +754,7 @@
       'Onay Bekliyor': 'b-onay',
       'Çözüldü': 'b-cozuldu'
     };
-    return `<span class="badge ${map[durum] || 'b-beklemede'}">${durum}</span>`;
+    return `<span class="badge ${map[d] || 'b-beklemede'}">${d}</span>`;
   }
 
   function renderProgressCardItem(t) {
@@ -833,7 +838,7 @@
       try {
         await fetch(state.apiUrl, {
           method: 'POST',
-          body: JSON.stringify({ action: 'create', pin: state.adminPin, bildiren, mekan, tur, aciliyet, konu })
+          body: JSON.stringify({ action: 'create', pin: state.adminPin, id: newTask.id, tarih, bildiren, mekan, tur, aciliyet, konu })
         });
         showToast('Bildirim kaydedildi ve canlı e-tabloya gönderildi.');
         state.lastSyncSignature = '';
@@ -893,6 +898,7 @@
     if (val === STAFF_PIN_CODE) {
       state.staffUnlocked = true;
       state.staffPin = val;
+      state.role = 'staff';
       state.tab = 'home';
       showToast('Sorumlu personel arayüzüne giriş yapıldı.');
       render();
@@ -907,11 +913,17 @@
     if (val === ADMIN_PIN_CODE) {
       state.adminUnlocked = true;
       state.adminPin = val;
+      state.role = 'admin';
+      state.tab = 'home';
       state.lastSyncSignature = '';
+      document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+      const adminBtn = document.getElementById('role-admin');
+      if (adminBtn) adminBtn.classList.add('active');
       updateConnBadge();
       updateMasterBar();
-      showToast('İdare girişi başarılı. Canlı e-tablo erişimi aktif.');
-      syncFromServer({ silent: false, forceRender: true });
+      render();
+      showToast('İdare girişi başarılı.');
+      syncFromServer({ silent: true, forceRender: true });
       startAutoSync();
     } else {
       showToast('Hatalı şifre! Lütfen tekrar deneyin.');
@@ -956,7 +968,7 @@
     const rows = state.tasks.map(t => [
       t.id, t.tarih, t.bildiren, t.mekan, t.tur, t.aciliyet,
       `"${(t.konu || '').replace(/"/g, '""')}"`,
-      t.durum, t.atanan,
+      t.durum || 'Beklemede', t.atanan,
       `"${(t.cozum || '').replace(/"/g, '""')}"`,
       t.sureSaat || ''
     ].join(';'));
@@ -988,7 +1000,7 @@
     }
 
     if (state.role === 'admin' && canAccessLiveSheet()) {
-      const pendingCount = state.tasks.filter(t => t.durum === 'Beklemede' || t.durum === 'Onay Bekliyor').length;
+      const pendingCount = state.tasks.filter(t => !t.durum || t.durum === 'Beklemede' || t.durum === 'Onay Bekliyor').length;
       nav.classList.remove('hidden');
       nav.innerHTML = `
         <button type="button" class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')">
@@ -1255,7 +1267,7 @@
       }
 
       if (state.tab === 'home') {
-        const waitingCount = state.tasks.filter(t => t.durum === 'Beklemede' || t.durum === 'Onay Bekliyor').length;
+        const waitingCount = state.tasks.filter(t => !t.durum || t.durum === 'Beklemede' || t.durum === 'Onay Bekliyor').length;
         main.innerHTML = `
           ${renderBlinkBanner()}
           <div class="card">
@@ -1266,43 +1278,46 @@
                 <button type="button" class="btn btn-outline btn-sm" onclick="syncFromServer({ silent: false, forceRender: true })">↻ Yenile</button>
               </div>
             </div>
-            ${state.tasks.map(t => `
-              <div class="task-item ${(t.durum === 'Beklemede' || t.durum === 'Onay Bekliyor') ? 'urgent-blink' : ''}">
-                <div class="task-top">
-                  <span class="task-meta">${t.id} • ${t.mekan} • ${t.bildiren || ''}</span>
-                  ${statusBadge(t.durum)}
-                </div>
-                <div class="task-title">${t.konu}</div>
-                ${t.durum === 'Beklemede' ? `
-                  <div style="display:flex; gap:8px; margin-top:8px;">
-                    <select id="assign-${t.id}" style="padding:6px 8px; font-size:12px;">
-                      <option>MURAT ŞAHİN</option>
-                      <option>AYŞEGÜL KINALI</option>
-                      <option>CENGİZHAN BELDÜZ</option>
-                      <option>İSMAİL KUMAŞ</option>
-                      <option>SELİM OSMANOĞLU</option>
-                      <option>MUHAMMET BEKİROĞLU</option>
-                      <option>HÜSEYİN KARADENİZ</option>
-                      <option>MEHMET SARI</option>
-                      <option>FİGEN ATASOY KARAKUŞ</option>
-                      <option>TÜRKAN ODABAŞI</option>
-                      <option>SONGÜL ÖKSÜZ</option>
-                      <option>ENVER</option>
-                    </select>
-                    <button type="button" class="btn btn-primary btn-sm" onclick="updateTask('${t.id}', { durum: 'Atandı', atanan: document.getElementById('assign-${t.id}').value })">Personel Ata</button>
+            ${state.tasks.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Henüz kayıtlı talep bulunmuyor.</p>' : state.tasks.map(t => {
+              const durum = t.durum || 'Beklemede';
+              return `
+                <div class="task-item ${(durum === 'Beklemede' || durum === 'Onay Bekliyor') ? 'urgent-blink' : ''}">
+                  <div class="task-top">
+                    <span class="task-meta">${t.id} • ${t.mekan} • ${t.bildiren || ''}</span>
+                    ${statusBadge(durum)}
                   </div>
-                ` : ''}
-                ${t.durum === 'Onay Bekliyor' ? `
-                  <div style="background:#fff7ed; padding:8px; border-radius:8px; font-size:12px; margin-top:6px;">
-                    <strong>Personel Çözümü (${t.atanan}):</strong> ${t.cozum}
-                    <div style="margin-top:8px;">
-                      <button type="button" class="btn btn-green btn-sm" onclick="updateTask('${t.id}', { durum: 'Çözüldü' })">✓ Onayla & Öğretmene Bildir</button>
+                  <div class="task-title">${t.konu}</div>
+                  ${durum === 'Beklemede' ? `
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                      <select id="assign-${t.id}" style="padding:6px 8px; font-size:12px;">
+                        <option>MURAT ŞAHİN</option>
+                        <option>AYŞEGÜL KINALI</option>
+                        <option>CENGİZHAN BELDÜZ</option>
+                        <option>İSMAİL KUMAŞ</option>
+                        <option>SELİM OSMANOĞLU</option>
+                        <option>MUHAMMET BEKİROĞLU</option>
+                        <option>HÜSEYİN KARADENİZ</option>
+                        <option>MEHMET SARI</option>
+                        <option>FİGEN ATASOY KARAKUŞ</option>
+                        <option>TÜRKAN ODABAŞI</option>
+                        <option>SONGÜL ÖKSÜZ</option>
+                        <option>ENVER</option>
+                      </select>
+                      <button type="button" class="btn btn-primary btn-sm" onclick="updateTask('${t.id}', { durum: 'Atandı', atanan: document.getElementById('assign-${t.id}').value })">Personel Ata</button>
                     </div>
-                  </div>
-                ` : ''}
-                ${t.durum === 'Çözüldü' ? `<div style="font-size:12px; color:#065f46; margin-top:4px;"><strong>Çözüm (${t.atanan}):</strong> ${t.cozum}</div>` : ''}
-              </div>
-            `).join('')}
+                  ` : ''}
+                  ${durum === 'Onay Bekliyor' ? `
+                    <div style="background:#fff7ed; padding:8px; border-radius:8px; font-size:12px; margin-top:6px;">
+                      <strong>Personel Çözümü (${t.atanan}):</strong> ${t.cozum}
+                      <div style="margin-top:8px;">
+                        <button type="button" class="btn btn-green btn-sm" onclick="updateTask('${t.id}', { durum: 'Çözüldü' })">✓ Onayla & Öğretmene Bildir</button>
+                      </div>
+                    </div>
+                  ` : ''}
+                  ${durum === 'Çözüldü' ? `<div style="font-size:12px; color:#065f46; margin-top:4px;"><strong>Çözüm (${t.atanan}):</strong> ${t.cozum}</div>` : ''}
+                </div>
+              `;
+            }).join('')}
           </div>
         `;
       } else if (state.tab === 'stats') {
