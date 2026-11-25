@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#003e6b">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:,">
 <title>hallederiz v1.0 | Sürmene Abdullah Kanca MYO</title>
 <style>
   :root {
@@ -755,4 +756,652 @@
     const label = progressLabel(t.durum);
     const badgeClass = t.durum === 'Çözüldü'
       ? 'b-cozuldu'
-      : ((t.durum === 'İşlemde' || t.durum === 'Onay Bekliyor') ? 'b-islemde' : 'b-
+      : ((t.durum === 'İşlemde' || t.durum === 'Onay Bekliyor') ? 'b-islemde' : 'b-beklemede');
+
+    return `
+      <div class="task-item">
+        <div class="task-top">
+          <span class="task-meta">${t.id} • ${t.mekan}${t.tarih ? ' • ' + t.tarih : ''}</span>
+          <span class="badge ${badgeClass}">${label}</span>
+        </div>
+        <div class="task-title">${t.konu}</div>
+        ${t.durum === 'Çözüldü' && t.cozum ? `<div style="font-size:12px; color:#065f46; background:#ecfdf5; padding:8px; border-radius:8px; margin-top:6px;"><strong>Onaylanan Sonuç:</strong> ${t.cozum}</div>` : ''}
+      </div>
+    `;
+  }
+
+  function renderCappedList(items, emptyText, moreLabelPrefix) {
+    if (!items.length) {
+      return `<p style="font-size:13px; color:var(--muted);">${emptyText}</p>`;
+    }
+    const topThree = items.slice(0, 3);
+    const rest = items.slice(3);
+    let html = topThree.map(renderProgressCardItem).join('');
+    if (rest.length > 0) {
+      html += `
+        <details class="more-drawer">
+          <summary>
+            <span>${moreLabelPrefix} (${rest.length} işlem daha)</span>
+            <span>▼</span>
+          </summary>
+          <div class="more-drawer-body">
+            ${rest.map(renderProgressCardItem).join('')}
+          </div>
+        </details>
+      `;
+    }
+    return html;
+  }
+
+  function renderBlinkBanner() {
+    if (!state.blinkAlertActive || !state.blinkAlertText) return '';
+    return `
+      <div class="alert-blink-banner" role="alert">
+        <span>🚨 ${state.blinkAlertText}</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="clearVisualAlert()">Kapat</button>
+      </div>
+    `;
+  }
+
+  async function submitNewTask(e) {
+    e.preventDefault();
+    const mekan = document.getElementById('fMekan').value;
+    const tur = document.getElementById('fTur').value;
+    const aciliyet = document.getElementById('fAciliyet').value;
+    const konu = document.getElementById('fKonu').value.trim();
+    const bildiren = document.getElementById('fBildiren').value.trim();
+    if (!bildiren || !konu) return;
+
+    state.myName = bildiren;
+    safeStorageSet('hallederiz_user_name', bildiren);
+
+    const now = new Date();
+    const tarih = now.toLocaleDateString('tr-TR') + ' ' + now.toTimeString().slice(0,5);
+    const newTask = {
+      id: 'IS-' + Math.floor(1000 + Math.random() * 9000),
+      tarih, bildiren, mekan, tur, aciliyet, konu,
+      durum: 'Beklemede', atanan: '', cozum: '', kapanis: '', sureSaat: 0
+    };
+
+    state.tasks.unshift(newTask);
+    state.knownTaskIds.push(newTask.id);
+    saveDemo();
+
+    triggerVisualAlert(`Yeni talep oluşturuldu: ${mekan} - ${konu}`, 'Yeni Talep Bildirimi');
+
+    if (canAccessLiveSheet() && state.apiUrl) {
+      try {
+        await fetch(state.apiUrl, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'create', pin: state.adminPin, bildiren, mekan, tur, aciliyet, konu })
+        });
+        showToast('Bildirim kaydedildi ve canlı e-tabloya gönderildi.');
+        state.lastSyncSignature = '';
+        await syncFromServer({ silent: false, forceRender: true });
+      } catch (err) {
+        showToast('Bildirim kaydedildi (canlı e-tablo bağlantısı sağlanamadı).');
+        render();
+      }
+    } else {
+      showToast('Bildirim kaydedildi.');
+      render();
+    }
+    const konuEl = document.getElementById('fKonu');
+    if (konuEl) konuEl.value = '';
+  }
+
+  async function updateTask(id, updates) {
+    const t = state.tasks.find(x => x.id === id);
+    if (t) {
+      Object.assign(t, updates);
+      if (updates.durum === 'Atandı' && updates.atanan) {
+        triggerVisualAlert(
+          `${updates.atanan} personeline görev atandı: ${t.mekan} - ${t.konu}`,
+          'Yeni Görev Ataması'
+        );
+      }
+      if (updates.durum === 'Çözüldü') {
+        t.kapanis = new Date().toLocaleDateString('tr-TR') + ' ' + new Date().toTimeString().slice(0,5);
+        t.sureSaat = Number((Math.random() * 4 + 0.5).toFixed(1));
+      }
+      saveDemo();
+    }
+
+    if (canAccessLiveSheet() && state.apiUrl) {
+      try {
+        const res = await fetch(state.apiUrl, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'update', id, pin: state.adminPin, ...updates })
+        });
+        const data = await res.json();
+        if (data && data.status === 'ok') {
+          showToast('Kayıt güncellendi ve canlı e-tabloya işlendi.');
+          state.lastSyncSignature = '';
+          await syncFromServer({ silent: false, forceRender: true });
+          return;
+        }
+      } catch (e) {}
+    }
+
+    showToast('İşlem güncellendi.');
+    render();
+  }
+
+  function unlockStaff() {
+    const inp = document.getElementById('staffPinInput');
+    const val = inp ? inp.value.trim() : '';
+    if (val === STAFF_PIN_CODE) {
+      state.staffUnlocked = true;
+      state.staffPin = val;
+      state.tab = 'home';
+      showToast('Sorumlu personel arayüzüne giriş yapıldı.');
+      render();
+    } else {
+      showToast('Hatalı şifre! Lütfen tekrar deneyin.');
+    }
+  }
+
+  function unlockAdmin() {
+    const inp = document.getElementById('pinInput');
+    const val = inp ? inp.value.trim() : '';
+    if (val === ADMIN_PIN_CODE) {
+      state.adminUnlocked = true;
+      state.adminPin = val;
+      state.lastSyncSignature = '';
+      updateConnBadge();
+      updateMasterBar();
+      showToast('İdare girişi başarılı. Canlı e-tablo erişimi aktif.');
+      syncFromServer({ silent: false, forceRender: true });
+      startAutoSync();
+    } else {
+      showToast('Hatalı şifre! Lütfen tekrar deneyin.');
+    }
+  }
+
+  function lockAllPrivileged() {
+    closeApiModal();
+    stopAutoSync();
+    state.adminUnlocked = false;
+    state.adminPin = '';
+    state.staffUnlocked = false;
+    state.staffPin = '';
+    state.blinkAlertActive = false;
+    state.blinkAlertText = '';
+    state.lastSyncSignature = '';
+    state.role = 'welcome';
+    state.tab = 'home';
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    updateConnBadge();
+    updateMasterBar();
+    showToast('Oturum kilitlendi.');
+    render();
+  }
+
+  async function toggleGlobalFeed(checked) {
+    state.publicFeedEnabled = checked;
+    if (canAccessLiveSheet() && state.apiUrl) {
+      try {
+        await fetch(state.apiUrl, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'toggle_feed', pin: state.adminPin, enabled: checked })
+        });
+      } catch (_) {}
+    }
+    showToast(checked ? 'Tamamlanan işlerin özeti personele açıldı.' : 'Genel tamamlanan iş akışı kapatıldı.');
+    render();
+  }
+
+  function exportCSV() {
+    const headers = ['ID', 'Tarih', 'Bildiren', 'Mekan', 'Tur', 'Aciliyet', 'Konu', 'Durum', 'Atanan_Personel', 'Cozum_Notu', 'Sure_Saat'];
+    const rows = state.tasks.map(t => [
+      t.id, t.tarih, t.bildiren, t.mekan, t.tur, t.aciliyet,
+      `"${(t.konu || '').replace(/"/g, '""')}"`,
+      t.durum, t.atanan,
+      `"${(t.cozum || '').replace(/"/g, '""')}"`,
+      t.sureSaat || ''
+    ].join(';'));
+    const csv = '\uFEFF' + [headers.join(';'), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'hallederiz_v1_rapor.csv';
+    a.click();
+  }
+
+  function renderNav() {
+    updateMasterBar();
+    const nav = document.getElementById('bottomNav');
+    if (!nav) return;
+
+    if (state.role === 'staff' && canAccessStaffInterface()) {
+      const activeCount = state.tasks.filter(t => t.durum === 'Atandı' || t.durum === 'İşlemde' || t.durum === 'Onay Bekliyor').length;
+      nav.classList.remove('hidden');
+      nav.innerHTML = `
+        <button type="button" class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')">
+          <span class="nav-icon">🔧</span>
+          <span>Görevlerim ${activeCount > 0 ? `<span class="alert-badge-blink">${activeCount}</span>` : ''}</span>
+        </button>
+        <button type="button" class="nav-item ${state.tab==='list'?'active':''}" onclick="switchTab('list')"><span class="nav-icon">✅</span>Tamamlananlar</button>
+        <button type="button" class="nav-item ${state.tab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span>Ayarlar</button>
+      `;
+      return;
+    }
+
+    if (state.role === 'admin' && canAccessLiveSheet()) {
+      const pendingCount = state.tasks.filter(t => t.durum === 'Beklemede' || t.durum === 'Onay Bekliyor').length;
+      nav.classList.remove('hidden');
+      nav.innerHTML = `
+        <button type="button" class="nav-item ${state.tab==='home'?'active':''}" onclick="switchTab('home')">
+          <span class="nav-icon">📥</span>
+          <span>İş Yönetimi ${pendingCount > 0 ? `<span class="alert-badge-blink">${pendingCount}</span>` : ''}</span>
+        </button>
+        <button type="button" class="nav-item ${state.tab==='stats'?'active':''}" onclick="switchTab('stats')"><span class="nav-icon">📊</span>İstatistikler</button>
+        <button type="button" class="nav-item ${state.tab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="nav-icon">🛡️</span>Yetki & Ayar</button>
+      `;
+      return;
+    }
+
+    nav.classList.add('hidden');
+    nav.innerHTML = '';
+  }
+
+  function render() {
+    updateConnBadge();
+    renderNav();
+    const main = document.getElementById('appMain');
+    if (!main) return;
+
+    const notifStatus = ('Notification' in window) ? Notification.permission : 'unsupported';
+
+    if (state.role === 'welcome') {
+      main.innerHTML = `
+        <div class="card" style="max-width:520px; margin:24px auto; text-align:center;">
+          <div class="card-title" style="justify-content:center;">Rol Seçimi Yapınız</div>
+          <p style="font-size:13px; color:var(--muted); margin-bottom:16px; line-height:1.5;">
+            Devam etmek için rol butonlarından birini seçiniz.
+          </p>
+          <div style="display:grid; gap:10px;">
+            <button type="button" class="btn btn-primary" onclick="switchRole('teacher')">Talep Eden Personel</button>
+            <button type="button" class="btn btn-cyan" onclick="switchRole('staff')">Sorumlu Personel</button>
+            <button type="button" class="btn btn-outline" onclick="switchRole('admin')">İdare</button>
+          </div>
+          <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="requestBrowserNotificationPermission()">
+              🔔 Tarayıcı Bildirimi (${notifStatus === 'granted' ? 'Açık' : 'İzin İste'})
+            </button>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    if (state.role === 'teacher') {
+      const progressItems = state.tasks.filter(t => t.durum === 'Çözüldü' || !state.myName || t.bildiren === state.myName);
+
+      main.innerHTML = `
+        ${renderBlinkBanner()}
+        <div class="card">
+          <div class="card-title">
+            <span>Yeni İş / Arıza Bildirimi</span>
+            <button type="button" class="btn btn-outline btn-sm" onclick="requestBrowserNotificationPermission()">🔔 Bildirim İzni</button>
+          </div>
+          <form onsubmit="submitNewTask(event)">
+            <div class="form-group">
+              <label>Bildirimde Bulunan Personel</label>
+              <input type="text" id="fBildiren" value="${state.myName}" placeholder="Ad Soyad / Unvan yazınız..." required>
+            </div>
+            <div class="row-2">
+              <div class="form-group">
+                <label>Mekan / Birim</label>
+                <select id="fMekan">
+                  <option>D101</option>
+                  <option>D102</option>
+                  <option>D103</option>
+                  <option>D104</option>
+                  <option>D105</option>
+                  <option>D201</option>
+                  <option>D202</option>
+                  <option>D203</option>
+                  <option>D204</option>
+                  <option>D205</option>
+                  <option>DZ01</option>
+                  <option>DB01</option>
+                  <option>L106 PC Lab</option>
+                  <option>L107 PC Lab</option>
+                  <option>L206 PC Lab</option>
+                  <option>L207 PC Lab</option>
+                  <option>Hidrolik Lab</option>
+                  <option>Kontrol Lab</option>
+                  <option>Kaynak Lab</option>
+                  <option>Elektrik Lab</option>
+                  <option>Elektronik Lab</option>
+                  <option>Gemi Mak. Lab.</option>
+                  <option>Gemi Lab(-2)</option>
+                  <option>H101</option>
+                  <option>H102</option>
+                  <option>H103</option>
+                  <option>H104</option>
+                  <option>H105</option>
+                  <option>H201</option>
+                  <option>H202</option>
+                  <option>H203</option>
+                  <option>H204</option>
+                  <option>H205</option>
+                  <option>Toplantı Odası</option>
+                  <option>Personel Odası(-1)</option>
+                  <option>Müdür</option>
+                  <option>Mdr. Yrd-1</option>
+                  <option>Mdr. Yrd.-2</option>
+                  <option>Danışma</option>
+                  <option>Öğrenci Klüp1</option>
+                  <option>Öğrenci Klüp2</option>
+                  <option>Öğrenci İşleri</option>
+                  <option>Diğer</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Bildirim Türü</label>
+                <select id="fTur">
+                  <option>Arıza</option>
+                  <option>İstek</option>
+                  <option>Şikayet</option>
+                  <option>Planlı Bakım Önerisi</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Öncelik Durumu</label>
+              <select id="fAciliyet">
+                <option value="Normal">Normal (Ders akışını engellemiyor)</option>
+                <option value="Acil">Acil (Ders / Uygulama aksıyor)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Sorun veya İstek Açıklaması</label>
+              <textarea id="fKonu" placeholder="Örn: D101 projeksiyon cihazı açılmıyor..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">İdareye Bildir</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Taleplerin İlerleme Süreci</span>
+            <span style="font-size:11px; color:var(--muted); font-weight:600;">Son ${Math.min(progressItems.length, 3)} / ${progressItems.length}</span>
+          </div>
+          ${renderCappedList(progressItems, 'Henüz takip edilen bir talep bulunmuyor.', 'Tüm İşlemleri Göster')}
+        </div>
+      `;
+    }
+
+    else if (state.role === 'staff') {
+      if (!canAccessStaffInterface()) {
+        main.innerHTML = `
+          <div class="card" style="max-width:400px; margin:24px auto; text-align:center;">
+            <div style="font-size:32px; margin-bottom:8px;">🔐</div>
+            <div class="card-title" style="justify-content:center;">Sorumlu Personel Girişi</div>
+            <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">Sorumlu personel arayüzü şifresini giriniz.</p>
+            <div class="form-group">
+              <input type="password" id="staffPinInput" maxlength="8" placeholder="••••••" style="text-align:center; font-size:18px; letter-spacing:4px;">
+            </div>
+            <button type="button" class="btn btn-cyan" onclick="unlockStaff()">Giriş Yap</button>
+          </div>
+        `;
+        return;
+      }
+
+      if (state.tab === 'home') {
+        const activeTasks = state.tasks.filter(t => t.durum === 'Atandı' || t.durum === 'İşlemde' || t.durum === 'Onay Bekliyor');
+        main.innerHTML = `
+          ${renderBlinkBanner()}
+          <div class="card">
+            <div class="card-title">
+              <span>Atanan Aktif Görevler ${activeTasks.length > 0 ? `<span class="alert-badge-blink">${activeTasks.length} Aktif</span>` : '(0)'}</span>
+              <button type="button" class="btn btn-outline btn-sm" onclick="requestBrowserNotificationPermission()">🔔 Bildirim İzni</button>
+            </div>
+            ${activeTasks.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Şu an üzerinizde bekleyen aktif görev bulunmuyor.</p>' : activeTasks.map(t => `
+              <div class="task-item ${t.durum === 'Atandı' ? 'urgent-blink' : ''}">
+                <div class="task-top">
+                  <span class="task-meta">${t.id} • ${t.mekan} • Sorumlu: ${t.atanan || 'Genel'}</span>
+                  ${statusBadge(t.durum)}
+                </div>
+                <div class="task-title">${t.konu}</div>
+                ${t.durum === 'Atandı' ? `
+                  <button type="button" class="btn btn-cyan btn-sm" onclick="updateTask('${t.id}', { durum: 'İşlemde' })">▶ İşleme Al</button>
+                ` : ''}
+                ${t.durum === 'İşlemde' ? `
+                  <div style="margin-top:8px;">
+                    <input type="text" id="sol-${t.id}" placeholder="Yapılan işlemi kısaca yazın..." style="margin-bottom:8px;">
+                    <button type="button" class="btn btn-green btn-sm" onclick="const v=document.getElementById('sol-${t.id}').value.trim(); if(!v){showToast('Çözüm açıklaması giriniz.');return;} updateTask('${t.id}', { durum: 'Onay Bekliyor', cozum: v })">✓ Tamamlandı Olarak Gönder</button>
+                  </div>
+                ` : ''}
+                ${t.durum === 'Onay Bekliyor' ? `<div style="font-size:12px; color:#9a3412;"><strong>Girilen Çözüm:</strong> ${t.cozum} (İdare onayı bekleniyor)</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else if (state.tab === 'list') {
+        const solved = (state.publicFeedEnabled && state.userShowPublicFeed) ? state.tasks.filter(t => t.durum === 'Çözüldü') : [];
+        main.innerHTML = `
+          <div class="card">
+            <div class="card-title">Tamamlanan İşler (Konu & Sonuç)</div>
+            ${!state.publicFeedEnabled ? '<p style="font-size:13px; color:var(--muted);">Tamamlanan işlerin genel görünümü yüksekokul idaresi tarafından kapatılmıştır.</p>' :
+              solved.map(t => `
+                <div class="task-item">
+                  <div class="task-top"><span class="task-meta">${t.mekan}</span>${statusBadge('Çözüldü')}</div>
+                  <div class="task-title">${t.konu}</div>
+                  <div style="font-size:12px;"><strong>Sonuç:</strong> ${t.cozum}</div>
+                </div>
+              `).join('')
+            }
+          </div>
+        `;
+      } else {
+        main.innerHTML = `
+          <div class="card">
+            <div class="card-title">Personel Akış ve Bildirim Tercihleri</div>
+            <div class="switch-row">
+              <div>
+                <div style="font-size:13px; font-weight:700;">Tarayıcı Bildirimleri</div>
+                <div style="font-size:11px; color:var(--muted);">Yeni görev atamalarında bildirim gösterir.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" ${state.browserNotifyEnabled ? 'checked' : ''} onchange="if(this.checked){requestBrowserNotificationPermission();}else{state.browserNotifyEnabled=false;safeStorageSet('hallederiz_notify_enabled',false);render();}">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="switch-row">
+              <div>
+                <div style="font-size:13px; font-weight:700;">Uyarı Sesi</div>
+                <div style="font-size:11px; color:var(--muted);">Yeni görev geldiğinde kısa bip sesi çalar.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" ${state.soundAlertEnabled ? 'checked' : ''} onchange="state.soundAlertEnabled=this.checked; safeStorageSet('hallederiz_sound_enabled', this.checked); render();">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="switch-row">
+              <div>
+                <div style="font-size:13px; font-weight:700;">Tamamlanan Genel İşleri Göster</div>
+                <div style="font-size:11px; color:var(--muted);">İdare izin verdiğinde sonuçlanan işleri listeler.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" ${state.userShowPublicFeed ? 'checked' : ''} onchange="state.userShowPublicFeed=this.checked; safeStorageSet('hallederiz_user_feed', this.checked); render();">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div style="margin-top:14px;">
+              <button type="button" class="btn btn-outline" onclick="lockAllPrivileged()">🔒 Oturumu Kilitle</button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    else {
+      if (!canAccessLiveSheet()) {
+        main.innerHTML = `
+          <div class="card" style="max-width:400px; margin:24px auto; text-align:center;">
+            <div style="font-size:32px; margin-bottom:8px;">🔐</div>
+            <div class="card-title" style="justify-content:center;">Yüksekokul İdaresi Girişi</div>
+            <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">İdare şifresini giriniz.</p>
+            <div class="form-group">
+              <input type="password" id="pinInput" maxlength="6" placeholder="•••••" style="text-align:center; font-size:18px; letter-spacing:4px;">
+            </div>
+            <button type="button" class="btn btn-primary" onclick="unlockAdmin()">Giriş Yap</button>
+          </div>
+        `;
+        return;
+      }
+
+      if (state.tab === 'home') {
+        const waitingCount = state.tasks.filter(t => t.durum === 'Beklemede' || t.durum === 'Onay Bekliyor').length;
+        main.innerHTML = `
+          ${renderBlinkBanner()}
+          <div class="card">
+            <div class="card-title">
+              <span>Gelen Talepler ve Süreç Yönetimi (${state.tasks.length}) ${waitingCount > 0 ? `<span class="alert-badge-blink">${waitingCount} Bekleyen</span>` : ''}</span>
+              <div style="display:flex; gap:6px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="requestBrowserNotificationPermission()">🔔 Bildirim</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="syncFromServer({ silent: false, forceRender: true })">↻ Yenile</button>
+              </div>
+            </div>
+            ${state.tasks.map(t => `
+              <div class="task-item ${(t.durum === 'Beklemede' || t.durum === 'Onay Bekliyor') ? 'urgent-blink' : ''}">
+                <div class="task-top">
+                  <span class="task-meta">${t.id} • ${t.mekan} • ${t.bildiren || ''}</span>
+                  ${statusBadge(t.durum)}
+                </div>
+                <div class="task-title">${t.konu}</div>
+                ${t.durum === 'Beklemede' ? `
+                  <div style="display:flex; gap:8px; margin-top:8px;">
+                    <select id="assign-${t.id}" style="padding:6px 8px; font-size:12px;">
+                      <option>MURAT ŞAHİN</option>
+                      <option>AYŞEGÜL KINALI</option>
+                      <option>CENGİZHAN BELDÜZ</option>
+                      <option>İSMAİL KUMAŞ</option>
+                      <option>SELİM OSMANOĞLU</option>
+                      <option>MUHAMMET BEKİROĞLU</option>
+                      <option>HÜSEYİN KARADENİZ</option>
+                      <option>MEHMET SARI</option>
+                      <option>FİGEN ATASOY KARAKUŞ</option>
+                      <option>TÜRKAN ODABAŞI</option>
+                      <option>SONGÜL ÖKSÜZ</option>
+                      <option>ENVER</option>
+                    </select>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="updateTask('${t.id}', { durum: 'Atandı', atanan: document.getElementById('assign-${t.id}').value })">Personel Ata</button>
+                  </div>
+                ` : ''}
+                ${t.durum === 'Onay Bekliyor' ? `
+                  <div style="background:#fff7ed; padding:8px; border-radius:8px; font-size:12px; margin-top:6px;">
+                    <strong>Personel Çözümü (${t.atanan}):</strong> ${t.cozum}
+                    <div style="margin-top:8px;">
+                      <button type="button" class="btn btn-green btn-sm" onclick="updateTask('${t.id}', { durum: 'Çözüldü' })">✓ Onayla & Öğretmene Bildir</button>
+                    </div>
+                  </div>
+                ` : ''}
+                ${t.durum === 'Çözüldü' ? `<div style="font-size:12px; color:#065f46; margin-top:4px;"><strong>Çözüm (${t.atanan}):</strong> ${t.cozum}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else if (state.tab === 'stats') {
+        const total = state.tasks.length;
+        const solvedList = state.tasks.filter(t => t.durum === 'Çözüldü');
+        const avgHours = solvedList.length ? (solvedList.reduce((a, b) => a + (Number(b.sureSaat) || 0), 0) / solvedList.length).toFixed(1) : '0.0';
+
+        const staffStats = STAFF_LIST.map(p => {
+          const allP = state.tasks.filter(t => t.atanan === p);
+          const solP = allP.filter(t => t.durum === 'Çözüldü');
+          const avgP = solP.length ? (solP.reduce((a, b) => a + (Number(b.sureSaat) || 0), 0) / solP.length).toFixed(1) + ' sa' : '-';
+          return { person: p, assigned: allP.length, solved: solP.length, avg: avgP };
+        });
+
+        main.innerHTML = `
+          <div class="card">
+            <div class="card-title">
+              <span>Yetkili İstatistik Paneli</span>
+              <button type="button" class="btn btn-cyan btn-sm" onclick="exportCSV()">📥 Excel / CSV İndir</button>
+            </div>
+            <div class="kpi-grid">
+              <div class="kpi-box"><div class="kpi-val">${total}</div><div class="kpi-lbl">Toplam İş</div></div>
+              <div class="kpi-box"><div class="kpi-val" style="color:var(--green)">${solvedList.length}</div><div class="kpi-lbl">Çözülen İş</div></div>
+              <div class="kpi-box"><div class="kpi-val" style="color:var(--cyan)">${avgHours} sa</div><div class="kpi-lbl">Ort. Çözüm Süresi</div></div>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Sorumlu Personel</th><th>Atanan</th><th>Çözülen</th><th>Ort. Süre</th></tr>
+              </thead>
+              <tbody>
+                ${staffStats.map(s => `
+                  <tr>
+                    <td><strong>${s.person}</strong></td>
+                    <td>${s.assigned}</td>
+                    <td>${s.solved}</td>
+                    <td>${s.avg}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      } else {
+        main.innerHTML = `
+          <div class="card">
+            <div class="card-title">Yüksekokul Geneli Görünürlük ve Bildirim Ayarları</div>
+            <div class="switch-row">
+              <div>
+                <div style="font-size:13px; font-weight:700;">Tarayıcı Bildirimleri</div>
+                <div style="font-size:11px; color:var(--muted);">Yeni taleplerde tarayıcı bildirimi gösterir.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" ${state.browserNotifyEnabled ? 'checked' : ''} onchange="if(this.checked){requestBrowserNotificationPermission();}else{state.browserNotifyEnabled=false;safeStorageSet('hallederiz_notify_enabled',false);render();}">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="switch-row">
+              <div>
+                <div style="font-size:13px; font-weight:700;">Uyarı Sesi</div>
+                <div style="font-size:11px; color:var(--muted);">Yeni bildirim ve atamalarda kısa sesli uyarı çalar.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" ${state.soundAlertEnabled ? 'checked' : ''} onchange="state.soundAlertEnabled=this.checked; safeStorageSet('hallederiz_sound_enabled', this.checked); render();">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="switch-row">
+              <div>
+                <div style="font-size:13px; font-weight:700;">Tamamlanan İşleri Personele Aç</div>
+                <div style="font-size:11px; color:var(--muted);">Açık olduğunda personel yalnızca işin konusu ve sonucunu isteğe bağlı görebilir. İstatistikler her zaman gizlidir.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" ${state.publicFeedEnabled ? 'checked' : ''} onchange="toggleGlobalFeed(this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div style="margin-top:14px;">
+              <button type="button" class="btn btn-outline" onclick="lockAllPrivileged()">🔒 İdare Oturumunu Kilitle</button>
+            </div>
+          </div>
+        `;
+      }
+    }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && canAccessLiveSheet()) {
+      syncFromServer({ silent: true, forceRender: false });
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    state.knownTaskIds = state.tasks.map(t => t.id).filter(Boolean);
+    render();
+    if (canAccessLiveSheet()) {
+      syncFromServer({ silent: true, forceRender: true });
+      startAutoSync();
+    }
+  });
+</script>
+</body>
+</html>
