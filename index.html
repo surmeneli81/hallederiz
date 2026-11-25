@@ -256,7 +256,7 @@
   </div>
 
   <div class="role-bar">
-    <button class="role-btn active" id="role-teacher" onclick="switchRole('teacher')">👨‍🏫 Öğretim Elemanı</button>
+    <button class="role-btn active" id="role-teacher" onclick="switchRole('teacher')">👨‍🏫 Talep Eden Personel</button>
     <button class="role-btn" id="role-staff" onclick="switchRole('staff')">🔧 Sorumlu Personel</button>
     <button class="role-btn" id="role-admin" onclick="switchRole('admin')">🏛️ İdare</button>
   </div>
@@ -302,7 +302,7 @@
     publicFeedEnabled: true,
     userShowPublicFeed: JSON.parse(localStorage.getItem('hallederiz_user_feed') ?? 'true'),
     userNotifyAll: JSON.parse(localStorage.getItem('hallederiz_user_notify_all') ?? 'false'),
-    myName: localStorage.getItem('hallederiz_user_name') || 'Öğr. Gör. Ahmet Yılmaz',
+    myName: localStorage.getItem('hallederiz_user_name') || '',
     staffUnit: localStorage.getItem('hallederiz_staff_unit') || 'Bilgi İşlem Birimi',
     tasks: JSON.parse(localStorage.getItem('hallederiz_demo_tasks') || 'null') || []
   };
@@ -426,8 +426,8 @@
     const tur = document.getElementById('fTur').value;
     const aciliyet = document.getElementById('fAciliyet').value;
     const konu = document.getElementById('fKonu').value.trim();
-    const bildiren = document.getElementById('fBildiren').value.trim() || state.myName;
-    if (!konu) return;
+    const bildiren = document.getElementById('fBildiren').value.trim();
+    if (!bildiren || !konu) return;
 
     state.myName = bildiren;
     localStorage.setItem('hallederiz_user_name', bildiren);
@@ -502,7 +502,7 @@
       showToast('Yetkili oturumu açıldı.');
       syncFromServer();
     } else {
-      showToast('Hatalı PIN kodu! (0571)');
+      showToast('Hatalı PIN kodu!');
     }
   }
 
@@ -570,22 +570,56 @@
             <div class="card-title">Yeni İş / Arıza Bildirimi</div>
             <form onsubmit="submitNewTask(event)">
               <div class="form-group">
-                <label>Bildiren Öğretim Elemanı</label>
-                <input type="text" id="fBildiren" value="${state.myName}" required>
+                <label>Bildirimde Bulunan Personel</label>
+                <input type="text" id="fBildiren" value="${state.myName}" placeholder="Ad Soyad / Unvan yazınız..." required>
               </div>
               <div class="row-2">
                 <div class="form-group">
                   <label>Mekan / Birim</label>
                   <select id="fMekan">
-                    <option>Amfi-1</option>
-                    <option>Amfi-2</option>
-                    <option>Bilgisayar Laboratuvarı-1</option>
-                    <option>Bilgisayar Laboratuvarı-2</option>
-                    <option>CNC ve Torna Atölyesi</option>
-                    <option>Elektronik ve Otomasyon Lab.</option>
-                    <option>Konferans Salonu</option>
-                    <option>Öğretim Elemanı Odası</option>
-                    <option>Ortak Alan / Koridor</option>
+                    <option>D101</option>
+                    <option>D102</option>
+                    <option>D103</option>
+                    <option>D104</option>
+                    <option>D105</option>
+                    <option>D201</option>
+                    <option>D202</option>
+                    <option>D203</option>
+                    <option>D204</option>
+                    <option>D205</option>
+                    <option>DZ01</option>
+                    <option>DB01</option>
+                    <option>L106 PC Lab</option>
+                    <option>L107 PC Lab</option>
+                    <option>L206 PC Lab</option>
+                    <option>L207 PC Lab</option>
+                    <option>Hidrolik Lab</option>
+                    <option>Kontrol Lab</option>
+                    <option>Kaynak Lab</option>
+                    <option>Elektrik Lab</option>
+                    <option>Elektronik Lab</option>
+                    <option>Gemi Mak. Lab.</option>
+                    <option>Gemi Lab(-2)</option>
+                    <option>H101</option>
+                    <option>H102</option>
+                    <option>H103</option>
+                    <option>H104</option>
+                    <option>H105</option>
+                    <option>H201</option>
+                    <option>H202</option>
+                    <option>H203</option>
+                    <option>H204</option>
+                    <option>H205</option>
+                    <option>Toplantı Odası</option>
+                    <option>Personel Odası(-1)</option>
+                    <option>Müdür</option>
+                    <option>Mdr. Yrd-1</option>
+                    <option>Mdr. Yrd.-2</option>
+                    <option>Danışma</option>
+                    <option>Öğrenci Klüp1</option>
+                    <option>Öğrenci Klüp2</option>
+                    <option>Öğrenci İşleri</option>
+                    <option>Diğer</option>
                   </select>
                 </div>
                 <div class="form-group">
@@ -607,21 +641,21 @@
               </div>
               <div class="form-group">
                 <label>Sorun veya İstek Açıklaması</label>
-                <textarea id="fKonu" placeholder="Örn: Amfi-1 projeksiyon cihazı açılmıyor..." required></textarea>
+                <textarea id="fKonu" placeholder="Örn: D101 projeksiyon cihazı açılmıyor..." required></textarea>
               </div>
               <button type="submit" class="btn btn-primary">İdareye Bildir</button>
             </form>
           </div>
         `;
       } else if (state.tab === 'list') {
-        const myTasks = state.tasks.filter(t => t.bildiren === state.myName);
+        const myTasks = state.myName ? state.tasks.filter(t => t.bildiren === state.myName) : state.tasks;
         const solvedPublic = (state.publicFeedEnabled && state.userShowPublicFeed)
           ? state.tasks.filter(t => t.durum === 'Çözüldü' && t.bildiren !== state.myName)
           : [];
 
         main.innerHTML = `
           <div class="card">
-            <div class="card-title">Kendi Bildirimlerim (${myTasks.length})</div>
+            <div class="card-title">${state.myName ? 'Kendi Bildirimlerim' : 'Son Bildirimler'} (${myTasks.length})</div>
             ${myTasks.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Henüz açtığınız bir bildirim bulunmuyor.</p>' : myTasks.map(t => `
               <div class="task-item">
                 <div class="task-top">
@@ -750,7 +784,7 @@
             <div class="card-title" style="justify-content:center;">Yüksekokul İdaresi Girişi</div>
             <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">İş atama, onay ve istatistik verilerine erişmek için yetkili PIN kodunu giriniz.</p>
             <div class="form-group">
-              <input type="password" id="pinInput" maxlength="6" placeholder="PIN Kodu (0571)" style="text-align:center; font-size:18px; letter-spacing:4px;">
+              <input type="password" id="pinInput" maxlength="6" placeholder="xxxx" style="text-align:center; font-size:18px; letter-spacing:4px;">
             </div>
             <button class="btn btn-primary" onclick="unlockAdmin()">Giriş Yap</button>
           </div>
@@ -812,7 +846,7 @@
         main.innerHTML = `
           <div class="card">
             <div class="card-title">
-              <span>Yetkili İstatistik Paneli (PIN: 0571)</span>
+              <span>Yetkili İstatistik Paneli</span>
               <button class="btn btn-cyan btn-sm" onclick="exportCSV()">📥 Excel / CSV İndir</button>
             </div>
             <div class="kpi-grid">
