@@ -381,6 +381,7 @@
 
 <script>
   const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwneJSOi2aJDnhe41yFEkE1pwbLTNHWdT4ZAfzcfsqEWNA_MkfHkrb7aN2_qJwXFgxN/exec";
+  const BUILD_TAG = "2026-11-27-v1";
   const ADMIN_PIN_CODE = "00571";
   const STAFF_PIN_CODE = "002008";
   const STAFF_LIST = ["MURAT ŞAHİN", "AYŞEGÜL KINALI", "CENGİZHAN BELDÜZ", "İSMAİL KUMAŞ", "SELİM OSMANOĞLU", "MUHAMMET BEKİROĞLU", "HÜSEYİN KARADENİZ", "MEHMET SARI", "FİGEN ATASOY KARAKUŞ", "TÜRKAN ODABAŞI", "SONGÜL ÖKSÜZ", "ENVER"];
@@ -409,10 +410,16 @@
     }
   }
 
+  if (safeStorageGet('hallederiz_build_tag', '') !== BUILD_TAG) {
+    safeStorageSet('hallederiz_api_url', DEFAULT_API_URL);
+    safeStorageSet('hallederiz_demo_tasks', '[]');
+    safeStorageSet('hallederiz_build_tag', BUILD_TAG);
+  }
+
   let state = {
     role: 'welcome',
     tab: 'home',
-    apiUrl: safeStorageGet('hallederiz_api_url', DEFAULT_API_URL) || DEFAULT_API_URL,
+    apiUrl: DEFAULT_API_URL,
     adminUnlocked: false,
     adminPin: '',
     staffUnlocked: false,
@@ -425,9 +432,7 @@
     blinkAlertText: '',
     myName: safeStorageGet('hallederiz_user_name', ''),
     staffFilter: safeStorageGet('hallederiz_staff_filter', 'ALL'),
-    tasks: Array.isArray(safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'), []))
-      ? safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'), [])
-      : [],
+    tasks: [],
     isSyncing: false,
     lastSyncSignature: '',
     knownTaskIds: [],
@@ -630,43 +635,12 @@
 
   function mergeTasksWithLocal(remoteTasks) {
     const remoteList = Array.isArray(remoteTasks) ? remoteTasks : [];
-    const merged = [];
-    const seen = new Set();
-
-    state.tasks.forEach(localItem => {
-      if (localItem && localItem.id) {
-        const key = String(localItem.id).trim();
-        const match = remoteList.find(r => r && r.id && String(r.id).trim() === key);
-        if (match) {
-          merged.push({
-            ...localItem,
-            ...match,
-            durum: match.durum || localItem.durum || 'Beklemede'
-          });
-        } else {
-          merged.push({
-            ...localItem,
-            durum: localItem.durum || 'Beklemede'
-          });
-        }
-        seen.add(key);
-      }
-    });
-
-    remoteList.forEach(remoteItem => {
-      if (remoteItem && remoteItem.id) {
-        const key = String(remoteItem.id).trim();
-        if (!seen.has(key)) {
-          merged.push({
-            ...remoteItem,
-            durum: remoteItem.durum || 'Beklemede'
-          });
-          seen.add(key);
-        }
-      }
-    });
-
-    return merged;
+    return remoteList.map(item => ({
+      ...item,
+      id: item && item.id ? String(item.id).trim() : '',
+      durum: (item && item.durum) ? String(item.durum).trim() : 'Beklemede',
+      atanan: (item && item.atanan) ? String(item.atanan).trim() : ''
+    })).filter(x => x.id);
   }
 
   async function syncFromServer(options = {}) {
@@ -906,7 +880,7 @@
       state.lastSyncSignature = '';
       setTimeout(() => {
         syncFromServer({ silent: true, forceRender: true });
-      }, 1200);
+      }, 1400);
     } else {
       showToast('Bildirim yerel olarak kaydedildi.');
     }
@@ -946,7 +920,7 @@
         state.lastSyncSignature = '';
         setTimeout(() => {
           syncFromServer({ silent: true, forceRender: true });
-        }, 1200);
+        }, 1400);
         return;
       }
     }
