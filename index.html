@@ -380,7 +380,7 @@
 </div>
 
 <script>
-  const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwneJSOi2aJDnhe41yFEkE1pwbLTNHWdT4ZAfzcfsqEWNA_MkfHkrb7aN2_qJwXFgxN/exec";
+  const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzH2E3K16Ek1zjIKo33dXVcc6bEfO0DursTxqAPiIMWU3te5ArRFvXfUK57zDcAm0qX/exec";
   const ADMIN_PIN_CODE = "00571";
   const STAFF_PIN_CODE = "002008";
   const STAFF_LIST = ["MURAT ŞAHİN", "AYŞEGÜL KINALI", "CENGİZHAN BELDÜZ", "İSMAİL KUMAŞ", "SELİM OSMANOĞLU", "MUHAMMET BEKİROĞLU", "HÜSEYİN KARADENİZ", "MEHMET SARI", "FİGEN ATASOY KARAKUŞ", "TÜRKAN ODABAŞI", "SONGÜL ÖKSÜZ", "ENVER"];
@@ -613,20 +613,60 @@
     safeStorageSet('hallederiz_demo_tasks', JSON.stringify(state.tasks));
   }
 
+  async function postToAppsScript(payload) {
+    if (!state.apiUrl) return false;
+    try {
+      await fetch(state.apiUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function mergeTasksWithLocal(remoteTasks) {
     const remoteList = Array.isArray(remoteTasks) ? remoteTasks : [];
-    const byId = new Map();
-    remoteList.forEach(item => {
-      if (item && item.id) {
-        byId.set(String(item.id), { ...item, durum: item.durum || 'Beklemede' });
-      }
-    });
+    const merged = [];
+    const seen = new Set();
+
     state.tasks.forEach(localItem => {
-      if (localItem && localItem.id && !byId.has(String(localItem.id))) {
-        byId.set(String(localItem.id), { ...localItem, durum: localItem.durum || 'Beklemede' });
+      if (localItem && localItem.id) {
+        const key = String(localItem.id).trim();
+        const match = remoteList.find(r => r && r.id && String(r.id).trim() === key);
+        if (match) {
+          merged.push({
+            ...localItem,
+            ...match,
+            durum: match.durum || localItem.durum || 'Beklemede'
+          });
+        } else {
+          merged.push({
+            ...localItem,
+            durum: localItem.durum || 'Beklemede'
+          });
+        }
+        seen.add(key);
       }
     });
-    return Array.from(byId.values());
+
+    remoteList.forEach(remoteItem => {
+      if (remoteItem && remoteItem.id) {
+        const key = String(remoteItem.id).trim();
+        if (!seen.has(key)) {
+          merged.push({
+            ...remoteItem,
+            durum: remoteItem.durum || 'Beklemede'
+          });
+          seen.add(key);
+        }
+      }
+    });
+
+    return merged;
   }
 
   async function syncFromServer(options = {}) {
@@ -846,26 +886,31 @@
     state.tasks.unshift(newTask);
     state.knownTaskIds.push(newTask.id);
     saveDemo();
+    render();
 
     triggerVisualAlert(`Yeni talep oluşturuldu: ${mekan} - ${konu}`, 'Yeni Talep Bildirimi');
 
-    if (state.apiUrl) {
-      try {
-        await fetch(state.apiUrl, {
-          method: 'POST',
-          body: JSON.stringify({ action: 'create', id: newTask.id, tarih, bildiren, mekan, tur, aciliyet, konu })
-        });
-        showToast('Bildirim kaydedildi ve canlı e-tabloya gönderildi.');
-        state.lastSyncSignature = '';
-        await syncFromServer({ silent: true, forceRender: true });
-      } catch (err) {
-        showToast('Bildirim kaydedildi (canlı e-tablo bağlantısı sağlanamadı).');
-        render();
-      }
+    const sent = await postToAppsScript({
+      action: 'create',
+      id: newTask.id,
+      tarih,
+      bildiren,
+      mekan,
+      tur,
+      aciliyet,
+      konu
+    });
+
+    if (sent) {
+      showToast('Bildirim kaydedildi ve canlı e-tabloya gönderildi.');
+      state.lastSyncSignature = '';
+      setTimeout(() => {
+        syncFromServer({ silent: true, forceRender: true });
+      }, 1200);
     } else {
-      showToast('Bildirim kaydedildi.');
-      render();
+      showToast('Bildirim yerel olarak kaydedildi.');
     }
+
     const konuEl = document.getElementById('fKonu');
     if (konuEl) konuEl.value = '';
   }
@@ -886,26 +931,27 @@
         t.sureSaat = Number((Math.random() * 4 + 0.5).toFixed(1));
       }
       saveDemo();
+      render();
     }
 
     if (state.apiUrl && activePin) {
-      try {
-        const res = await fetch(state.apiUrl, {
-          method: 'POST',
-          body: JSON.stringify({ action: 'update', id, pin: activePin, ...updates })
-        });
-        const data = await res.json();
-        if (data && data.status === 'ok') {
-          showToast('Kayıt güncellendi ve canlı e-tabloya işlendi.');
-          state.lastSyncSignature = '';
-          await syncFromServer({ silent: true, forceRender: true });
-          return;
-        }
-      } catch (e) {}
+      const sent = await postToAppsScript({
+        action: 'update',
+        id,
+        pin: activePin,
+        ...updates
+      });
+      if (sent) {
+        showToast('Kayıt güncellendi ve canlı e-tabloya işlendi.');
+        state.lastSyncSignature = '';
+        setTimeout(() => {
+          syncFromServer({ silent: true, forceRender: true });
+        }, 1200);
+        return;
+      }
     }
 
     showToast('İşlem güncellendi.');
-    render();
   }
 
   function unlockStaff() {
@@ -974,12 +1020,11 @@
   async function toggleGlobalFeed(checked) {
     state.publicFeedEnabled = checked;
     if (canAccessLiveSheet() && state.apiUrl) {
-      try {
-        await fetch(state.apiUrl, {
-          method: 'POST',
-          body: JSON.stringify({ action: 'toggle_feed', pin: state.adminPin, enabled: checked })
-        });
-      } catch (_) {}
+      await postToAppsScript({
+        action: 'toggle_feed',
+        pin: state.adminPin,
+        enabled: checked
+      });
     }
     showToast(checked ? 'Tamamlanan işlerin özeti personele açıldı.' : 'Genel tamamlanan iş akışı kapatıldı.');
     render();
