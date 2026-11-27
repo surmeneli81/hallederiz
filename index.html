@@ -380,7 +380,7 @@
 </div>
 
 <script>
-  const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzH2E3K16Ek1zjIKo33dXVcc6bEfO0DursTxqAPiIMWU3te5ArRFvXfUK57zDcAm0qX/exec";
+  const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwneJSOi2aJDnhe41yFEkE1pwbLTNHWdT4ZAfzcfsqEWNA_MkfHkrb7aN2_qJwXFgxN/exec";
   const ADMIN_PIN_CODE = "00571";
   const STAFF_PIN_CODE = "002008";
   const STAFF_LIST = ["MURAT ŞAHİN", "AYŞEGÜL KINALI", "CENGİZHAN BELDÜZ", "İSMAİL KUMAŞ", "SELİM OSMANOĞLU", "MUHAMMET BEKİROĞLU", "HÜSEYİN KARADENİZ", "MEHMET SARI", "FİGEN ATASOY KARAKUŞ", "TÜRKAN ODABAŞI", "SONGÜL ÖKSÜZ", "ENVER"];
@@ -424,13 +424,14 @@
     blinkAlertActive: false,
     blinkAlertText: '',
     myName: safeStorageGet('hallederiz_user_name', ''),
-    staffUnit: safeStorageGet('hallederiz_staff_unit', STAFF_LIST[0] || 'MURAT ŞAHİN'),
+    staffFilter: safeStorageGet('hallederiz_staff_filter', 'ALL'),
     tasks: Array.isArray(safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'), []))
       ? safeParseJson(safeStorageGet('hallederiz_demo_tasks', '[]'), [])
       : [],
     isSyncing: false,
     lastSyncSignature: '',
-    knownTaskIds: []
+    knownTaskIds: [],
+    knownAssignedIds: []
   };
 
   let autoSyncTimer = null;
@@ -632,7 +633,7 @@
     const { silent = false, forceRender = false } = options;
     updateConnBadge();
 
-    if (!canAccessLiveSheet() || !state.apiUrl) {
+    if (!state.apiUrl) {
       if (forceRender) render();
       return;
     }
@@ -641,7 +642,13 @@
     state.isSyncing = true;
 
     try {
-      const url = `${state.apiUrl}?action=admin_all&pin=${encodeURIComponent(state.adminPin)}&_t=${Date.now()}`;
+      let url = `${state.apiUrl}?action=public_feed&_t=${Date.now()}`;
+      if (canAccessLiveSheet()) {
+        url = `${state.apiUrl}?action=admin_all&pin=${encodeURIComponent(state.adminPin)}&_t=${Date.now()}`;
+      } else if (canAccessStaffInterface()) {
+        url = `${state.apiUrl}?action=staff_tasks&pin=${encodeURIComponent(state.staffPin)}&_t=${Date.now()}`;
+      }
+
       const res = await fetch(url);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
@@ -662,6 +669,9 @@
           ? mergedTasks.filter(t => t.id && !prevIds.has(t.id))
           : [];
 
+        const prevAssigned = new Set(state.knownAssignedIds);
+        const newlyAssigned = mergedTasks.filter(t => t.id && t.durum === 'Atandı' && !prevAssigned.has(t.id));
+
         const nextSignature = JSON.stringify({
           feedEnabled: state.publicFeedEnabled,
           tasks: mergedTasks
@@ -670,14 +680,21 @@
 
         state.tasks = mergedTasks;
         state.knownTaskIds = mergedTasks.map(t => t.id).filter(Boolean);
+        state.knownAssignedIds = mergedTasks.filter(t => t.durum === 'Atandı').map(t => t.id).filter(Boolean);
         state.lastSyncSignature = nextSignature;
         saveDemo();
 
-        if (newlyArrived.length > 0) {
+        if (canAccessLiveSheet() && newlyArrived.length > 0) {
           const first = newlyArrived[0];
           triggerVisualAlert(
             `Yeni talep geldi: ${first.mekan} - ${first.konu}`,
             'Yeni İş / Arıza Bildirimi'
+          );
+        } else if (state.role === 'staff' && canAccessStaffInterface() && newlyAssigned.length > 0) {
+          const firstA = newlyAssigned[0];
+          triggerVisualAlert(
+            `Yeni görev atandı (${firstA.atanan || 'Personel'}): ${firstA.mekan} - ${firstA.konu}`,
+            'Yeni Görev Ataması'
           );
         }
 
@@ -700,7 +717,7 @@
   function startAutoSync() {
     stopAutoSync();
     autoSyncTimer = setInterval(() => {
-      if (document.visibilityState === 'visible' && canAccessLiveSheet()) {
+      if (document.visibilityState === 'visible') {
         syncFromServer({ silent: true, forceRender: false });
       }
     }, AUTO_SYNC_INTERVAL_MS);
@@ -729,9 +746,7 @@
     if (activeBtn) activeBtn.classList.add('active');
     updateMasterBar();
     render();
-    if (canAccessLiveSheet()) {
-      syncFromServer({ silent: true, forceRender: true });
-    }
+    syncFromServer({ silent: true, forceRender: true });
   }
 
   function switchTab(tab) {
@@ -834,15 +849,15 @@
 
     triggerVisualAlert(`Yeni talep oluşturuldu: ${mekan} - ${konu}`, 'Yeni Talep Bildirimi');
 
-    if (canAccessLiveSheet() && state.apiUrl) {
+    if (state.apiUrl) {
       try {
         await fetch(state.apiUrl, {
           method: 'POST',
-          body: JSON.stringify({ action: 'create', pin: state.adminPin, id: newTask.id, tarih, bildiren, mekan, tur, aciliyet, konu })
+          body: JSON.stringify({ action: 'create', id: newTask.id, tarih, bildiren, mekan, tur, aciliyet, konu })
         });
         showToast('Bildirim kaydedildi ve canlı e-tabloya gönderildi.');
         state.lastSyncSignature = '';
-        await syncFromServer({ silent: false, forceRender: true });
+        await syncFromServer({ silent: true, forceRender: true });
       } catch (err) {
         showToast('Bildirim kaydedildi (canlı e-tablo bağlantısı sağlanamadı).');
         render();
@@ -856,6 +871,7 @@
   }
 
   async function updateTask(id, updates) {
+    const activePin = canAccessLiveSheet() ? state.adminPin : state.staffPin;
     const t = state.tasks.find(x => x.id === id);
     if (t) {
       Object.assign(t, updates);
@@ -872,17 +888,17 @@
       saveDemo();
     }
 
-    if (canAccessLiveSheet() && state.apiUrl) {
+    if (state.apiUrl && activePin) {
       try {
         const res = await fetch(state.apiUrl, {
           method: 'POST',
-          body: JSON.stringify({ action: 'update', id, pin: state.adminPin, ...updates })
+          body: JSON.stringify({ action: 'update', id, pin: activePin, ...updates })
         });
         const data = await res.json();
         if (data && data.status === 'ok') {
           showToast('Kayıt güncellendi ve canlı e-tabloya işlendi.');
           state.lastSyncSignature = '';
-          await syncFromServer({ silent: false, forceRender: true });
+          await syncFromServer({ silent: true, forceRender: true });
           return;
         }
       } catch (e) {}
@@ -900,8 +916,14 @@
       state.staffPin = val;
       state.role = 'staff';
       state.tab = 'home';
-      showToast('Sorumlu personel arayüzüne giriş yapıldı.');
+      state.lastSyncSignature = '';
+      document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+      const staffBtn = document.getElementById('role-staff');
+      if (staffBtn) staffBtn.classList.add('active');
       render();
+      showToast('Sorumlu personel arayüzüne giriş yapıldı.');
+      syncFromServer({ silent: true, forceRender: true });
+      startAutoSync();
     } else {
       showToast('Hatalı şifre! Lütfen tekrar deneyin.');
     }
@@ -1163,15 +1185,29 @@
       }
 
       if (state.tab === 'home') {
-        const activeTasks = state.tasks.filter(t => t.durum === 'Atandı' || t.durum === 'İşlemde' || t.durum === 'Onay Bekliyor');
+        const allActive = state.tasks.filter(t => t.durum === 'Atandı' || t.durum === 'İşlemde' || t.durum === 'Onay Bekliyor');
+        const activeTasks = state.staffFilter === 'ALL'
+          ? allActive
+          : allActive.filter(t => (t.atanan || '').trim() === state.staffFilter);
+
         main.innerHTML = `
           ${renderBlinkBanner()}
           <div class="card">
             <div class="card-title">
               <span>Atanan Aktif Görevler ${activeTasks.length > 0 ? `<span class="alert-badge-blink">${activeTasks.length} Aktif</span>` : '(0)'}</span>
-              <button type="button" class="btn btn-outline btn-sm" onclick="requestBrowserNotificationPermission()">🔔 Bildirim İzni</button>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="requestBrowserNotificationPermission()">🔔 Bildirim</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="syncFromServer({ silent: false, forceRender: true })">↻ Yenile</button>
+              </div>
             </div>
-            ${activeTasks.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Şu an üzerinizde bekleyen aktif görev bulunmuyor.</p>' : activeTasks.map(t => `
+            <div class="form-group" style="margin-bottom:12px;">
+              <label>Personel Filtresi</label>
+              <select onchange="state.staffFilter=this.value; safeStorageSet('hallederiz_staff_filter', this.value); render();">
+                <option value="ALL" ${state.staffFilter==='ALL'?'selected':''}>Tüm Sorumlu Personeller (${allActive.length})</option>
+                ${STAFF_LIST.map(p => `<option value="${p}" ${state.staffFilter===p?'selected':''}>${p}</option>`).join('')}
+              </select>
+            </div>
+            ${activeTasks.length === 0 ? '<p style="font-size:13px; color:var(--muted);">Seçili filtrede bekleyen aktif görev bulunmuyor.</p>' : activeTasks.map(t => `
               <div class="task-item ${t.durum === 'Atandı' ? 'urgent-blink' : ''}">
                 <div class="task-top">
                   <span class="task-meta">${t.id} • ${t.mekan} • Sorumlu: ${t.atanan || 'Genel'}</span>
@@ -1404,18 +1440,17 @@
   }
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && canAccessLiveSheet()) {
+    if (document.visibilityState === 'visible') {
       syncFromServer({ silent: true, forceRender: false });
     }
   });
 
   document.addEventListener('DOMContentLoaded', () => {
     state.knownTaskIds = state.tasks.map(t => t.id).filter(Boolean);
+    state.knownAssignedIds = state.tasks.filter(t => t.durum === 'Atandı').map(t => t.id).filter(Boolean);
     render();
-    if (canAccessLiveSheet()) {
-      syncFromServer({ silent: true, forceRender: true });
-      startAutoSync();
-    }
+    syncFromServer({ silent: true, forceRender: true });
+    startAutoSync();
   });
 </script>
 </body>
